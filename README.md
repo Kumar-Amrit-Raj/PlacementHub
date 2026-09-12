@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with the Phase 1 foundation and Phase 2A backend authentication. Frontend authentication and business features are not implemented.
+MERN placement-management application with the Phase 1 foundation and Phase 2B backend authentication sessions. Frontend authentication and business features are not implemented.
 
 ## Requirements
 
@@ -68,6 +68,23 @@ Vite proxies `/api` requests to the backend. If you change backend `PORT`, updat
 - Responses: 400 for invalid input, 409 for duplicate registration, 401 for incorrect credentials. Passwords and hashes are never returned.
 - JWTs expire after 15 minutes and are verified with a fixed algorithm, issuer, and audience. Configure `JWT_SECRET` before starting the backend.
 - Future protected routes can use `authenticate(tokens)` followed by `authorize('admin')`. Authentication reads the current user role from MongoDB; role middleware returns 403 for insufficient permission.
-- The User model supports student, recruiter, and admin. No admin creation endpoint, refresh tokens, logout, or frontend authentication is included.
+- The User model supports student, recruiter, and admin. No admin creation endpoint or frontend authentication is included.
 
 Authentication code lives in `backend/src/modules/auth/`, the User model in `backend/src/modules/users/`, and reusable middleware in `backend/src/middleware/`.
+
+## Authentication sessions
+
+Registration and login set a `placementhub_refresh` cookie. Refresh tokens are random opaque values; only SHA-256 hashes are stored in MongoDB. The cookie is HTTP-only, host-only, scoped to `/api/v1/auth`, and `SameSite=Strict`. Set `NODE_ENV=production` for the `Secure` flag and serve over HTTPS. Local development permits HTTP.
+
+- `POST /api/v1/auth/refresh`: send the refresh cookie and `X-CSRF-Protection: 1`. Returns the same JSON shape as login and replaces the refresh cookie. Missing, malformed, expired, revoked, or replayed refresh tokens return 401 and clear the cookie.
+- `POST /api/v1/auth/logout`: send the refresh cookie and `X-CSRF-Protection: 1`. Revokes that login session and clears its cookie; returns 204, including when the cookie is missing or already invalid. Other login sessions remain valid. The cookie, not a bearer header, identifies the session to log out.
+- `GET /api/v1/auth/me`: send `Authorization: Bearer <accessToken>`. Returns `{ user: { id, name, email, role } }`; missing or invalid credentials return 401.
+- Refresh/logout reject missing protection headers and cross-site browser requests with 403. Use the same-origin Vite proxy locally. Cross-origin credentialed CORS is not enabled.
+- Sessions expire 30 days after login; rotation never extends that deadline. A limit of 4,096 rotations bounds stored replay history, after which login is required.
+- Each rotation atomically replaces the current hash and retains spent hashes. Reuse of any spent token revokes the whole session, including successor refresh tokens and all associated access tokens. This follows the replay-detection approach in [RFC 9700 §4.14.2](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14.2).
+- Clients must serialize refresh requests. Concurrent refreshes with the same cookie trigger replay revocation, so do not blindly retry a spent cookie after a lost response; sign in again.
+- Authentication checks both the current user and the unexpired, unrevoked session in MongoDB. Logout/replay therefore invalidate access tokens immediately on subsequent requests, despite their remaining 15-minute JWT lifetime. Database failures fail closed.
+- Expired session records are removed by a MongoDB TTL index; authorization checks expiry directly without waiting for cleanup. Changing `JWT_SECRET` invalidates access JWTs but does not revoke stored refresh sessions.
+- Existing Phase 2A access tokens lack a session identifier and must be replaced by signing in again.
+
+No frontend authentication or admin provisioning is implemented.
