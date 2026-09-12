@@ -1,5 +1,7 @@
 import { User, publicUser } from '../modules/users/user.model.js';
 
+import { AuthSession } from '../modules/auth/session.model.js';
+
 export function authenticate(tokens) {
   return async (req, res, next) => {
     const match = /^Bearer ([^\s]+)$/i.exec(req.get('authorization') || '');
@@ -14,7 +16,13 @@ export function authenticate(tokens) {
     }
     try {
       // Read the current role from MongoDB; do not authorize using stale JWT roles.
-      const user = await User.findById(payload.sub);
+      const session = await AuthSession.exists({
+        _id: payload.sid,
+        user: payload.sub,
+        revokedAt: null,
+        expiresAt: { $gt: new Date() },
+      });
+      const user = session ? await User.findById(payload.sub) : null;
       if (!user) {
         return res
           .status(401)

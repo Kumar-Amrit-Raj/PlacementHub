@@ -17,6 +17,8 @@ import {
 } from '../src/modules/auth/token.service.js';
 import { readConfig } from '../src/config/env.js';
 
+import { AuthSession } from '../src/modules/auth/session.model.js';
+
 const jwtSecret = randomBytes(32).toString('hex');
 const tokens = createTokenService(jwtSecret);
 const password = randomBytes(16).toString('hex');
@@ -30,7 +32,7 @@ before(
     await mongoose.connect(mongo.getUri(), {
       dbName: 'placementhub_auth_test',
     });
-    await User.init();
+    await Promise.all([User.init(), AuthSession.init()]);
     const app = express();
     // Test-only routes exercise middleware without adding product endpoints.
     app.get('/protected', authenticate(tokens), (req, res) =>
@@ -63,17 +65,18 @@ after(async () => {
 });
 beforeEach(async () => {
   await User.deleteMany({});
+  await AuthSession.deleteMany({});
 });
 
-async function post(path, body) {
+async function post(path, body, headers = {}) {
   const response = await fetch(base + '/api/v1/auth/' + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   });
   return {
     status: response.status,
-    body: await response.json(),
+    body: response.status === 204 ? null : await response.json(),
     headers: response.headers,
   };
 }
@@ -264,4 +267,230 @@ test('User model and auth configuration reject invalid roles and missing secrets
   }
   assert.throws(() => authorize(), /valid allowed roles/);
   assert.throws(() => authorize('owner'), /valid allowed roles/);
+});
+
+function cookieFrom(result) {
+  return result.headers.get('set-cookie').split(';')[0];
+}
+async function sessionRequest(path, cookie, extraHeaders = {}) {
+  return post(
+    path,
+    {},
+    {
+      'X-CSRF-Protection': '1',
+      ...(cookie ? { Cookie: cookie } : {}),
+      ...extraHeaders,
+    },
+  );
+}
+
+test('refresh cookie is HTTP-only and server stores only digests', async () => {
+  const registered = await post('register', registration());
+  const header = registered.headers.get('set-cookie');
+  assert.match(header, /HttpOnly/i);
+  assert.match(header, /SameSite=Strict/i);
+  assert.match(header, /Path=\/api\/v1\/auth/i);
+  assert.doesNotMatch(header, /; Secure/i);
+  assert.equal(registered.body.refreshToken, undefined);
+  const raw = cookieFrom(registered).split('=')[1];
+  const session = await AuthSession.findOne().select('+tokenHash +spentHashes');
+  assert.equal(session.tokenHash.length, 64);
+  assert.equal(JSON.stringify(session).includes(raw), false);
+  const current = await get('/api/v1/auth/me', registered.body.accessToken);
+  assert.equal(current.status, 200);
+  assert.deepEqual((await current.json()).user, registered.body.user);
+  assert.equal((await get('/api/v1/auth/me')).status, 401);
+});
+
+test('production cookies are Secure and clear with the same attributes', async (t) => {
+  const production = createApp({ jwtSecret, nodeEnv: 'production' }).listen(
+    0,
+    '127.0.0.1',
+  );
+  await new Promise((resolve) => production.once('listening', resolve));
+  t.after(() => new Promise((resolve) => production.close(resolve)));
+  const url = `http://127.0.0.1:${production.address().port}/api/v1/auth`;
+  const registered = await fetch(url + '/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(registration()),
+  });
+  assert.match(registered.headers.get('set-cookie'), /; Secure/i);
+  const loggedOut = await fetch(url + '/logout', {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Protection': '1',
+      Cookie: registered.headers.get('set-cookie').split(';')[0],
+    },
+  });
+  assert.equal(loggedOut.status, 204);
+  assert.match(loggedOut.headers.get('set-cookie'), /; Secure/i);
+  assert.match(loggedOut.headers.get('set-cookie'), /HttpOnly/i);
+  assert.match(loggedOut.headers.get('set-cookie'), /SameSite=Strict/i);
+});
+
+test('rotation replaces cookies, preserves absolute expiry, and uses current user details', async () => {
+  const registered = await post('register', registration());
+  const originalExpiry = (await AuthSession.findOne()).expiresAt.getTime();
+  await User.updateOne({}, { role: 'recruiter' });
+  const refreshed = await sessionRequest('refresh', cookieFrom(registered));
+  assert.equal(refreshed.status, 200);
+  assert.notEqual(cookieFrom(refreshed), cookieFrom(registered));
+  assert.notEqual(refreshed.body.accessToken, registered.body.accessToken);
+  assert.equal(refreshed.body.user.role, 'recruiter');
+  assert.equal(refreshed.body.expiresIn, 900);
+  assert.equal(
+    (await AuthSession.findOne()).expiresAt.getTime(),
+    originalExpiry,
+  );
+  assert.equal(
+    (await get('/api/v1/auth/me', refreshed.body.accessToken)).status,
+    200,
+  );
+  const expiredAccess = jwt.sign(
+    { sid: tokens.verify(refreshed.body.accessToken).sid },
+    jwtSecret,
+    {
+      subject: registered.body.user.id,
+      issuer: TOKEN_ISSUER,
+      audience: TOKEN_AUDIENCE,
+      expiresIn: -1,
+    },
+  );
+  assert.equal((await get('/api/v1/auth/me', expiredAccess)).status, 401);
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(refreshed))).status,
+    200,
+  );
+});
+
+test('replay revokes the whole session including successor refresh and access tokens', async () => {
+  const registered = await post('register', registration());
+  const first = await sessionRequest('refresh', cookieFrom(registered));
+  const second = await sessionRequest('refresh', cookieFrom(first));
+  assert.equal(second.status, 200);
+  const replay = await sessionRequest('refresh', cookieFrom(registered));
+  assert.equal(replay.status, 401);
+  assert.match(replay.headers.get('set-cookie'), /Expires=Thu, 01 Jan 1970/i);
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(second))).status,
+    401,
+  );
+  assert.equal(
+    (await get('/api/v1/auth/me', registered.body.accessToken)).status,
+    401,
+  );
+  assert.equal(
+    (await get('/api/v1/auth/me', second.body.accessToken)).status,
+    401,
+  );
+});
+
+test('simultaneous refresh allows one rotation and revokes that session on reuse', async () => {
+  const registered = await post('register', registration());
+  const results = await Promise.all([
+    sessionRequest('refresh', cookieFrom(registered)),
+    sessionRequest('refresh', cookieFrom(registered)),
+  ]);
+  assert.deepEqual(results.map((result) => result.status).sort(), [200, 401]);
+  const winner = results.find((result) => result.status === 200);
+  assert.equal(
+    (await get('/api/v1/auth/me', winner.body.accessToken)).status,
+    401,
+  );
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(winner))).status,
+    401,
+  );
+});
+
+test('logout is idempotent and revokes only the supplied session', async () => {
+  const first = await post('register', registration());
+  const other = await post('login', { email: registration().email, password });
+  assert.ok(other.headers.get('set-cookie'));
+  const rotated = await sessionRequest('refresh', cookieFrom(first));
+  // An older, issued cookie can still revoke its family.
+  assert.equal((await sessionRequest('logout', cookieFrom(first))).status, 204);
+  assert.equal((await sessionRequest('logout', cookieFrom(first))).status, 204);
+  assert.equal((await sessionRequest('logout')).status, 204);
+  assert.equal(
+    (await get('/api/v1/auth/me', rotated.body.accessToken)).status,
+    401,
+  );
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(rotated))).status,
+    401,
+  );
+  assert.equal(
+    (await get('/api/v1/auth/me', other.body.accessToken)).status,
+    200,
+  );
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(other))).status,
+    200,
+  );
+});
+
+test('expiry and rotation limit fail closed without waiting for TTL cleanup', async () => {
+  const registered = await post('register', registration());
+  await AuthSession.updateOne({}, { expiresAt: new Date(Date.now() - 1000) });
+  assert.equal(
+    (await get('/api/v1/auth/me', registered.body.accessToken)).status,
+    401,
+  );
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(registered))).status,
+    401,
+  );
+  const login = await post('login', { email: registration().email, password });
+  await AuthSession.updateOne(
+    { _id: tokens.verify(login.body.accessToken).sid },
+    { rotationCount: 4096 },
+  );
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(login))).status,
+    401,
+  );
+  assert.equal(
+    (await get('/api/v1/auth/me', login.body.accessToken)).status,
+    401,
+  );
+});
+
+test('session mutations reject CSRF and malformed cookies without revoking valid sessions', async () => {
+  const registered = await post('register', registration());
+  const cookie = cookieFrom(registered);
+  for (const path of ['refresh', 'logout']) {
+    assert.equal((await post(path, {}, { Cookie: cookie })).status, 403);
+    assert.equal(
+      (await sessionRequest(path, cookie, { 'Sec-Fetch-Site': 'cross-site' }))
+        .status,
+      403,
+    );
+  }
+  for (const cookieValue of [
+    undefined,
+    'placementhub_refresh=broken',
+    'placementhub_refresh=%E0%A4%A',
+  ]) {
+    assert.equal((await sessionRequest('refresh', cookieValue)).status, 401);
+  }
+  const forged = cookie.slice(0, cookie.lastIndexOf('.') + 1) + 'a'.repeat(64);
+  assert.equal((await sessionRequest('refresh', forged)).status, 401);
+  assert.equal((await sessionRequest('logout', forged)).status, 204);
+  assert.equal(
+    (await get('/api/v1/auth/me', registered.body.accessToken)).status,
+    200,
+  );
+  assert.equal((await sessionRequest('refresh', cookie)).status, 200);
+});
+
+test('deleted users cannot refresh and their session is revoked', async () => {
+  const registered = await post('register', registration());
+  await User.deleteMany({});
+  assert.equal(
+    (await sessionRequest('refresh', cookieFrom(registered))).status,
+    401,
+  );
+  assert.ok((await AuthSession.findOne()).revokedAt);
 });

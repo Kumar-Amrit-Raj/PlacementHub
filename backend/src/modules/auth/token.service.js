@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 
 export const ACCESS_TOKEN_SECONDS = 15 * 60;
 export const TOKEN_ISSUER = 'placementhub-api';
@@ -9,9 +10,10 @@ export function createTokenService(secret) {
     throw new Error('JWT_SECRET must contain at least 32 characters.');
   }
   return {
-    sign(user) {
-      return jwt.sign({ role: user.role }, secret, {
+    sign(user, sessionId) {
+      return jwt.sign({ role: user.role, sid: sessionId }, secret, {
         algorithm: 'HS256',
+        jwtid: randomUUID(),
         subject: user.id,
         issuer: TOKEN_ISSUER,
         audience: TOKEN_AUDIENCE,
@@ -29,7 +31,9 @@ export function createTokenService(secret) {
         typeof payload !== 'object' ||
         typeof payload.sub !== 'string' ||
         !/^[a-f0-9]{24}$/i.test(payload.sub) ||
-        typeof payload.exp !== 'number'
+        typeof payload.exp !== 'number' ||
+        typeof payload.sid !== 'string' ||
+        !/^[a-f0-9]{24}$/i.test(payload.sid)
       ) {
         throw new Error('Invalid access token');
       }
