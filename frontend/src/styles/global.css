@@ -1,0 +1,26 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #17352b;
+  background: #f4f7f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 48rem;
+  margin: 15vh auto;
+  padding: 2rem;
+}
+.eyebrow {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+h1 {
+  font-size: clamp(2rem, 6vw, 4rem);
+  line-height: 1.1;
+}
+p {
+  line-height: 1.6;
+}
