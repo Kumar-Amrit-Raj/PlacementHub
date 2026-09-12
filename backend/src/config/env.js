@@ -21,5 +21,11 @@ export function readConfig(env = process.env) {
   if (!['development', 'test', 'production'].includes(nodeEnv)) {
     throw new Error('NODE_ENV must be development, test, or production.');
   }
-  return { port, mongodbUri, nodeEnv };
+  const jwtSecret = env.JWT_SECRET;
+  if (typeof jwtSecret !== 'string' || jwtSecret.trim().length < 32) {
+    throw new Error(
+      'JWT_SECRET must contain at least 32 characters. Configure backend/.env.',
+    );
+  }
+  return { port, mongodbUri, nodeEnv, jwtSecret };
 }

@@ -1,10 +1,13 @@
 import express from 'express';
 import { isDatabaseReady } from './config/database.js';
+import { createAuthRouter } from './modules/auth/auth.routes.js';
+import { createTokenService } from './modules/auth/token.service.js';
 
-export function createApp({ databaseReady = isDatabaseReady } = {}) {
+export function createApp({ databaseReady = isDatabaseReady, jwtSecret } = {}) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '100kb' }));
+  app.use('/api/v1/auth', createAuthRouter(createTokenService(jwtSecret)));
 
   app.get('/api/v1/health', (_req, res) => {
     const ready = databaseReady();

@@ -9,8 +9,14 @@
     "test": "node --test"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mongoose": "^9.10.0"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.0",
+    "zod": "^4.6.2"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.2.0"
   }
 }
