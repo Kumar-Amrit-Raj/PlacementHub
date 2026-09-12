@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
 import { readConfig } from '../src/config/env.js';
+import { randomBytes } from 'node:crypto';
+const jwtSecret = randomBytes(32).toString('hex');
 
 test('configuration rejects missing database URI and invalid ports', () => {
   assert.throws(() => readConfig({}), /MONGODB_URI/);
@@ -12,14 +14,17 @@ test('configuration rejects missing database URI and invalid ports', () => {
     );
   }
   assert.equal(
-    readConfig({ MONGODB_URI: 'mongodb://localhost/test' }).port,
+    readConfig({
+      MONGODB_URI: 'mongodb://localhost/test',
+      JWT_SECRET: jwtSecret,
+    }).port,
     5000,
   );
 });
 
 for (const ready of [true, false]) {
   test(`health endpoint reports database readiness: ${ready}`, async (t) => {
-    const server = createApp({ databaseReady: () => ready }).listen(
+    const server = createApp({ databaseReady: () => ready, jwtSecret }).listen(
       0,
       '127.0.0.1',
     );

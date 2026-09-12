@@ -1,6 +1,6 @@
 # PlacementHub
 
-Phase 1 foundation for a MERN placement-management application. Authentication and business features are not implemented.
+MERN placement-management application with the Phase 1 foundation and Phase 2A backend authentication. Frontend authentication and business features are not implemented.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ Copy-Item backend/.env.example backend/.env
 Copy-Item frontend/.env.example frontend/.env
 ```
 
-Set `MONGODB_URI` in `backend/.env` to your database connection string. The example targets local MongoDB on port 27017. Environment files are ignored by Git. Never place secrets in frontend variables.
+Set `MONGODB_URI` in `backend/.env` to your database connection string. Set `JWT_SECRET` to a randomly generated value of at least 32 characters; generate one locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Never share or commit the value. The example targets local MongoDB on port 27017. Environment files are ignored by Git. Never place secrets in frontend variables.
 
 ## Development
 
@@ -38,7 +38,7 @@ Vite proxies `/api` requests to the backend. If you change backend `PORT`, updat
 
 ## Checks and builds
 
-- `npm test`: backend configuration and HTTP health tests using Node's test runner; these isolate readiness and do not require MongoDB.
+- `npm test`: backend configuration, health, and authentication tests using Node's test runner. Authentication tests start an isolated temporary MongoDB via `mongodb-memory-server`; the first run may download a MongoDB binary. Tests never connect to Atlas.
 - `npm run lint`: ESLint checks JavaScript and JSX.
 - `npm run format:check`: verify Prettier formatting.
 - `npm run format`: apply formatting.
@@ -59,4 +59,15 @@ Vite proxies `/api` requests to the backend. If you change backend `PORT`, updat
 - `backend/src/server.js`: startup and graceful shutdown.
 - `backend/tests/`: foundation tests.
 
-Feature directories will be added when their implementation begins.
+## Backend authentication
+
+- `POST /api/v1/auth/register`: JSON `name`, `email`, `password`, and optional `role` (`student` by default or `recruiter`). Public admin registration is rejected.
+- `POST /api/v1/auth/login`: JSON `email` and `password`.
+- Both return a safe `user` object, `accessToken`, `tokenType: "Bearer"`, and `expiresIn: 900`.
+- Emails are trimmed and lowercased. Passwords require at least 8 characters and at most 72 UTF-8 bytes; passwords are never trimmed.
+- Responses: 400 for invalid input, 409 for duplicate registration, 401 for incorrect credentials. Passwords and hashes are never returned.
+- JWTs expire after 15 minutes and are verified with a fixed algorithm, issuer, and audience. Configure `JWT_SECRET` before starting the backend.
+- Future protected routes can use `authenticate(tokens)` followed by `authorize('admin')`. Authentication reads the current user role from MongoDB; role middleware returns 403 for insufficient permission.
+- The User model supports student, recruiter, and admin. No admin creation endpoint, refresh tokens, logout, or frontend authentication is included.
+
+Authentication code lives in `backend/src/modules/auth/`, the User model in `backend/src/modules/users/`, and reusable middleware in `backend/src/middleware/`.

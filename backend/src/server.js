@@ -2,6 +2,8 @@ import { createApp } from './app.js';
 import { readConfig } from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
 
+import { User } from './modules/users/user.model.js';
+
 let server;
 let stopping = false;
 
@@ -34,11 +36,16 @@ async function start() {
       'MongoDB connection failed. Check MONGODB_URI and database availability.',
     );
   }
-  server = createApp().listen(config.port, () => {
-    console.log(
-      `PlacementHub API listening on http://localhost:${config.port}`,
-    );
-  });
+  // Ensure the unique email index exists before accepting registrations.
+  await User.init();
+  server = createApp({ jwtSecret: config.jwtSecret }).listen(
+    config.port,
+    () => {
+      console.log(
+        `PlacementHub API listening on http://localhost:${config.port}`,
+      );
+    },
+  );
   server.on('error', () => {
     console.error('HTTP server failed to start. Check PORT availability.');
     void shutdown(1);
