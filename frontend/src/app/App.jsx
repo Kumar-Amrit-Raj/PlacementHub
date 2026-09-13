@@ -1,3 +1,6 @@
+import OpportunityListPage from '../features/opportunities/OpportunityListPage.jsx';
+import OpportunityEditorPage from '../features/opportunities/OpportunityEditorPage.jsx';
+import OpportunityDetailPage from '../features/opportunities/OpportunityDetailPage.jsx';
 import { Link, Navigate, Route, Routes } from 'react-router';
 import { GuestRoute, ProtectedRoute } from '../features/auth/RouteGuards.jsx';
 import AuthPage from '../features/auth/AuthPage.jsx';
@@ -34,11 +37,31 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute roles={['student']} />}>
             <Route
+              path="/student/opportunities"
+              element={<OpportunityListPage />}
+            />
+            <Route
+              path="/student/opportunities/:id"
+              element={<OpportunityDetailPage />}
+            />
+            <Route
               path="/student/profile"
               element={<ProfilePage role="student" />}
             />
           </Route>
           <Route element={<ProtectedRoute roles={['recruiter']} />}>
+            <Route
+              path="/recruiter/opportunities"
+              element={<OpportunityListPage recruiter />}
+            />
+            <Route
+              path="/recruiter/opportunities/new"
+              element={<OpportunityEditorPage key="new" />}
+            />
+            <Route
+              path="/recruiter/opportunities/:id/edit"
+              element={<OpportunityEditorPage key="edit" />}
+            />
             <Route
               path="/recruiter/profile"
               element={<ProfilePage role="recruiter" />}

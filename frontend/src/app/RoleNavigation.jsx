@@ -13,6 +13,9 @@ export default function RoleNavigation() {
     <nav aria-label="Main navigation">
       <NavLink to="/account">Account</NavLink>
       {destination && <NavLink to={destination[0]}>{destination[1]}</NavLink>}
+      {['student', 'recruiter'].includes(user.role) && (
+        <NavLink to={'/' + user.role + '/opportunities'}>Opportunities</NavLink>
+      )}
     </nav>
   );
 }

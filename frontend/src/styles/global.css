@@ -410,3 +410,27 @@ button.secondary:hover {
     flex: 1 1 auto;
   }
 }
+.button-link {
+  display: inline-block;
+  padding: 13px 20px;
+  background: #214f3b;
+  color: white;
+  border-radius: 7px;
+  text-decoration: none;
+  font-weight: 650;
+}
+.button-link:hover {
+  background: #183c2c;
+}
+.opportunity-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.workspace-page article h2,
+.company-list p {
+  overflow-wrap: anywhere;
+}
+.workspace-page > article {
+  margin-block: 24px;
+}
