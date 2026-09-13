@@ -47,3 +47,14 @@ export const pageSchema = z
   })
   .strict();
 export const controlSchema = z.object({}).strict();
+
+export const studentPageSchema = pageSchema
+  .extend({
+    jobType: z.enum(JOB_TYPES).optional(),
+    location: z.string().trim().min(1).max(200).optional(),
+    search: z.string().trim().min(1).max(200).optional(),
+    eligibility: z
+      .enum(['eligible', 'not_eligible', 'incomplete_profile'])
+      .optional(),
+  })
+  .strict();

@@ -33,7 +33,7 @@ Create requires `title` (1–200), `description` (1–10,000), `location` (1–2
 - `allowedBranches`: up to 50 unique, case-insensitive branch names, each 1–100 characters; [] means unrestricted.
 - `graduationYear`: integer 1950–2100 or null (unrestricted).
 
-Eligibility fields default to null/[]; they describe requirements without restricting browsing. Application eligibility enforcement is not part of this phase. PATCH preserves omitted fields and requires at least one recognized field. Unknown fields, ownership/status injection, invalid numbers, duplicate branches, and past deadlines return 400 with validation details.
+Eligibility fields default to null/[]; they describe requirements without restricting browsing by default. Phase 4C evaluates the current student profile and supports eligibility filtering; see [Eligibility and filters](eligibility.md). Application submission is not implemented. PATCH preserves omitted fields and requires at least one recognized field. Unknown fields, ownership/status injection, invalid numbers, duplicate branches, and past deadlines return 400 with validation details.
 
 Every accepted content update returns to draft, including same-value updates. Internal opportunity versions make concurrent writes conditional; conflicts return 409 and require reloading before retrying. Company approval/version is checked again in student queries so concurrent company edits cannot expose an unapproved profile. This does not require multi-document transactions.
 

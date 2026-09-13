@@ -434,3 +434,20 @@ button.secondary:hover {
 .workspace-page > article {
   margin-block: 24px;
 }
+.eligibility-panel {
+  margin-block: 16px;
+  padding: 16px;
+  background: #f5f6f0;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+.eligibility-panel ul {
+  padding-left: 20px;
+  line-height: 1.6;
+}
+.eligibility-panel a {
+  font-size: 0.88rem;
+}
+.opportunity-filters {
+  margin-block: 24px;
+}

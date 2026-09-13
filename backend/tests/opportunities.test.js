@@ -1,3 +1,4 @@
+import { StudentProfile } from '../src/modules/profiles/student-profile.model.js';
 import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
@@ -39,6 +40,7 @@ after(async () => {
 });
 beforeEach(async () => {
   await Promise.all([
+    StudentProfile.deleteMany({}),
     User.deleteMany({}),
     AuthSession.deleteMany({}),
     RecruiterProfile.deleteMany({}),
@@ -421,4 +423,155 @@ test('approved legacy company profiles without a stored version can publish', as
   const draft = await create();
   assert.equal((await control(draft._id, 'publish')).status, 200);
   assert.equal((await studentDetail(draft._id)).status, 200);
+});
+
+test('student responses evaluate the authenticated profile and reflect profile updates', async () => {
+  const draft = await create();
+  await control(draft._id, 'publish');
+  assert.equal(
+    (await studentDetail(draft._id)).body.opportunity.eligibility.status,
+    'incomplete_profile',
+  );
+  await api(
+    '/profiles/student/me',
+    'PATCH',
+    { cgpa: 7, branch: ' cse ', graduationYear: 2027 },
+    'student',
+  );
+  assert.equal(
+    (await studentDetail(draft._id)).body.opportunity.eligibility.status,
+    'eligible',
+  );
+  assert.equal(
+    (await studentList()).body.opportunities[0].eligibility.status,
+    'eligible',
+  );
+  await api('/profiles/student/me', 'PATCH', { cgpa: 5 }, 'student');
+  const result = await studentDetail(draft._id);
+  assert.equal(result.body.opportunity.eligibility.status, 'not_eligible');
+  assert.match(
+    result.body.opportunity.eligibility.reasons[0].message,
+    /below the minimum/,
+  );
+  assert.equal((await studentList('?user=someone')).status, 400);
+});
+test('eligibility filtering occurs before pagination and does not skip matching records', async () => {
+  const incomplete = await create();
+  await control(incomplete._id, 'publish');
+  const first = await create({
+    ...valid(),
+    minimumCgpa: null,
+    allowedBranches: [],
+    graduationYear: null,
+  });
+  await control(first._id, 'publish');
+  const second = await create({
+    ...valid(),
+    minimumCgpa: null,
+    allowedBranches: [],
+    graduationYear: null,
+  });
+  await control(second._id, 'publish');
+  const page = await studentList('?eligibility=eligible&limit=1');
+  assert.equal(page.body.opportunities[0]._id, first._id);
+  assert.equal(page.body.nextCursor, first._id);
+  const next = await studentList(
+    '?eligibility=eligible&limit=1&after=' + page.body.nextCursor,
+  );
+  assert.equal(next.body.opportunities[0]._id, second._id);
+  assert.equal(next.body.nextCursor, null);
+  assert.equal(
+    (await studentList('?eligibility=incomplete_profile')).body.opportunities
+      .length,
+    1,
+  );
+  assert.equal(
+    (await studentList('?eligibility=not_eligible')).body.opportunities.length,
+    0,
+  );
+});
+test('combined type/location/search filters are case-insensitive literal matches', async () => {
+  const draft = await create({
+    ...valid(),
+    title: 'C++ Engineer (R&D)',
+    jobType: 'contract',
+    location: 'Remote [India]',
+  });
+  await control(draft._id, 'publish');
+  const query =
+    '?jobType=contract&location=' +
+    encodeURIComponent('[india]') +
+    '&search=' +
+    encodeURIComponent('c++');
+  assert.equal((await studentList(query)).body.opportunities.length, 1);
+  assert.equal(
+    (await studentList('?search=Example')).body.opportunities.length,
+    1,
+  );
+  assert.equal(
+    (await studentList('?search=useful')).body.opportunities.length,
+    1,
+  );
+  assert.equal(
+    (await studentList('?search=' + encodeURIComponent('.*'))).body
+      .opportunities.length,
+    0,
+  );
+  assert.equal(
+    (await studentList('?jobType=internship')).body.opportunities.length,
+    0,
+  );
+});
+test('filters never expose expired, unpublished or hidden opportunities', async () => {
+  const draft = await create({
+    ...valid(),
+    minimumCgpa: null,
+    allowedBranches: [],
+    graduationYear: null,
+  });
+  assert.equal(
+    (await studentList('?eligibility=eligible')).body.opportunities.length,
+    0,
+  );
+  await control(draft._id, 'publish');
+  await RecruiterProfile.updateOne(
+    { _id: company._id },
+    { approvalStatus: 'pending' },
+  );
+  assert.equal(
+    (await studentList('?eligibility=eligible&search=Software')).body
+      .opportunities.length,
+    0,
+  );
+  assert.equal((await studentDetail(draft._id)).status, 404);
+  await RecruiterProfile.updateOne(
+    { _id: company._id },
+    { approvalStatus: 'approved' },
+  );
+  await Opportunity.updateOne(
+    { _id: draft._id },
+    { deadline: new Date(Date.now() - 1) },
+  );
+  assert.equal(
+    (await studentList('?eligibility=eligible')).body.opportunities.length,
+    0,
+  );
+});
+test('invalid filter types and attempts to inject profile data are rejected', async () => {
+  for (const query of [
+    '?jobType=invalid',
+    '?eligibility=unknown',
+    '?search=',
+    '?location=',
+    '?search=a&search=b',
+    '?cgpa=10',
+    '?location[x]=y',
+    '?search=' + 'a'.repeat(201),
+  ]) {
+    assert.equal((await studentList(query)).status, 400, query);
+  }
+  assert.equal(
+    (await api('/opportunities/mine?eligibility=eligible')).status,
+    400,
+  );
 });

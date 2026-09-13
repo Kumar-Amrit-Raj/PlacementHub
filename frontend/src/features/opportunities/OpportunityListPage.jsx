@@ -1,3 +1,5 @@
+import EligibilityStatus from './EligibilityStatus.jsx';
+import { jobTypes } from './opportunity-utils.js';
 import { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router';
@@ -17,6 +19,18 @@ export default function OpportunityListPage({ recruiter = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [reload, setReload] = useState(0);
+  const emptyFilters = {
+    search: '',
+    location: '',
+    jobType: '',
+    eligibility: '',
+  };
+  const [filters, setFilters] = useState(emptyFilters);
+  const [applied, setApplied] = useState(emptyFilters);
+  const query = new URLSearchParams({
+    limit: '20',
+    ...Object.fromEntries(Object.entries(applied).filter(([, value]) => value)),
+  }).toString();
   const generation = useRef(0);
   const flight = useRef(false);
   const now = useNow();
@@ -29,7 +43,7 @@ export default function OpportunityListPage({ recruiter = false }) {
     setCursor(null);
     flight.current = false;
     Promise.all([
-      client.request(path + '?limit=20'),
+      client.request(path + '?' + query),
       recruiter
         ? client.request('/profiles/recruiter/me')
         : Promise.resolve(null),
@@ -50,7 +64,7 @@ export default function OpportunityListPage({ recruiter = false }) {
     return () => {
       generation.current++;
     };
-  }, [client, path, recruiter, reload]);
+  }, [client, path, recruiter, reload, query]);
   async function more() {
     if (flight.current) return;
     const current = generation.current;
@@ -59,7 +73,7 @@ export default function OpportunityListPage({ recruiter = false }) {
     setError(null);
     try {
       const data = await client.request(
-        path + '?limit=20&after=' + encodeURIComponent(cursor),
+        path + '?' + query + '&after=' + encodeURIComponent(cursor),
       );
       if (current === generation.current) {
         setItems((items) => [
@@ -93,6 +107,107 @@ export default function OpportunityListPage({ recruiter = false }) {
           ? 'Manage drafts and publishing for your company.'
           : 'Explore current roles and review their eligibility requirements.'}
       </p>
+      {!recruiter && (
+        <form
+          className="card opportunity-filters"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setApplied(
+              Object.fromEntries(
+                Object.entries(filters).map(([key, value]) => [
+                  key,
+                  value.trim(),
+                ]),
+              ),
+            );
+            setReload((value) => value + 1);
+          }}
+        >
+          <h2>Find your next role</h2>
+          <div className="profile-form">
+            <label>
+              Search opportunities
+              <input
+                value={filters.search}
+                maxLength={200}
+                placeholder="Title, description, or company"
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    search: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              Location filter
+              <input
+                value={filters.location}
+                maxLength={200}
+                placeholder="City or remote"
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    location: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              Job type filter
+              <select
+                value={filters.jobType}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    jobType: event.target.value,
+                  }))
+                }
+              >
+                <option value="">All job types</option>
+                {jobTypes.map((type) => (
+                  <option key={type}>{type}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Eligibility filter
+              <select
+                value={filters.eligibility}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    eligibility: event.target.value,
+                  }))
+                }
+              >
+                <option value="">All eligibility statuses</option>
+                <option value="eligible">Eligible</option>
+                <option value="not_eligible">Not eligible</option>
+                <option value="incomplete_profile">Incomplete profile</option>
+              </select>
+            </label>
+          </div>
+          <div className="actions">
+            <button>Apply filters</button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setFilters(emptyFilters);
+                setApplied(emptyFilters);
+                setReload((value) => value + 1);
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
+          <p className="muted">
+            Eligibility uses your current student profile. Expired and
+            unavailable roles are excluded.
+          </p>
+        </form>
+      )}
       <div className="actions">
         {recruiter && (
           <Link className="button-link" to="/recruiter/opportunities/new">
@@ -120,7 +235,9 @@ export default function OpportunityListPage({ recruiter = false }) {
           <h2>
             {recruiter
               ? 'Start with your first opportunity'
-              : 'No current opportunities'}
+              : Object.values(applied).some(Boolean)
+                ? 'No matching opportunities'
+                : 'No current opportunities'}
           </h2>
           <p>
             {recruiter
@@ -135,7 +252,12 @@ export default function OpportunityListPage({ recruiter = false }) {
             <div>
               {recruiter && <OpportunityStatus item={item} company={company} />}
               <h2>{item.title}</h2>
-              {!recruiter && <p>{item.company?.companyName}</p>}
+              {!recruiter && (
+                <>
+                  <p>{item.company?.companyName}</p>
+                  <EligibilityStatus eligibility={item.eligibility} />
+                </>
+              )}
               <p className="muted">
                 {item.jobType} · {item.location}
               </p>

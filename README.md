@@ -135,3 +135,7 @@ Recruiters can create and manage their own company’s drafts and publish opport
 - Tests cover payload types, date conversion, role guards, pagination, validation, approval restrictions, and recovery. Run `npm test -w frontend`, `npm run lint -w frontend`, and `npm run build -w frontend`. Browser verification uses an isolated temporary database.
 
 No applications, apply actions, or final dashboards are included.
+
+## Eligibility and opportunity filters (Phase 4C)
+
+Student opportunity cards and details show eligible, not eligible, or incomplete profile, with field-specific reasons. Browse by job type, location, eligibility, and search text. Evaluation uses the current authenticated student profile and is reusable for future application checks. See [Eligibility and filters](docs/eligibility.md) for rules, API parameters, pagination behavior, and availability handling. No application functionality is included.
