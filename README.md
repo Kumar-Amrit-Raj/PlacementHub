@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4B adds opportunity management and student browsing on the Phase 4A APIs. Applications and dashboards are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4B adds opportunity management and student browsing on the Phase 4A APIs. Phase 5A adds backend applications; the application frontend and dashboards are not implemented.
 
 ## Requirements
 
@@ -139,3 +139,7 @@ No applications, apply actions, or final dashboards are included.
 ## Eligibility and opportunity filters (Phase 4C)
 
 Student opportunity cards and details show eligible, not eligible, or incomplete profile, with field-specific reasons. Browse by job type, location, eligibility, and search text. Evaluation uses the current authenticated student profile and is reusable for future application checks. See [Eligibility and filters](docs/eligibility.md) for rules, API parameters, pagination behavior, and availability handling. No application functionality is included.
+
+## Backend applications (Phase 5A)
+
+Students can apply once to a visible, unexpired opportunity when their current profile is eligible. Recruiters can list their company’s applications and move them through audited, forward-only statuses. See [Applications API](docs/applications.md) for endpoints, transitions, errors, snapshot behavior, and the MongoDB replica-set requirement. No application frontend or dashboards are included.

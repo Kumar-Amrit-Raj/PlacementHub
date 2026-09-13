@@ -1,5 +1,5 @@
 // Pure domain rule: availability/authorization are separate checks.
-// Future application submission must re-read the profile and opportunity first.
+// Application submission re-reads profile and opportunity inside its transaction.
 export function evaluateEligibility(opportunity, profile) {
   const reasons = [];
   const missing = (field, message) =>

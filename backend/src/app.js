@@ -1,3 +1,4 @@
+import { createApplicationRouter } from './modules/applications/application.routes.js';
 import { createOpportunityRouter } from './modules/opportunities/opportunity.routes.js';
 import express from 'express';
 import { createProfileRouter } from './modules/profiles/profile.routes.js';
@@ -20,6 +21,7 @@ export function createApp({
   app.use('/api/v1/admin', createAdminRouter(tokens));
   app.use('/api/v1/profiles', createProfileRouter(tokens));
   app.use('/api/v1/opportunities', createOpportunityRouter(tokens));
+  app.use('/api/v1/applications', createApplicationRouter(tokens));
 
   app.get('/api/v1/health', (_req, res) => {
     const ready = databaseReady();
