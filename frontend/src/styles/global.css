@@ -1,26 +1,234 @@
 :root {
-  font-family: system-ui, sans-serif;
-  color: #17352b;
-  background: #f4f7f3;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #193c32;
+  background: #f5f6f0;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+* {
+  box-sizing: border-box;
 }
 body {
   margin: 0;
 }
+a {
+  color: #235b47;
+  text-underline-offset: 4px;
+}
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26px 6vw;
+  border-bottom: 1px solid #dce2d8;
+}
+.brand {
+  font-size: 1.45rem;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: -0.06em;
+}
+.brand span {
+  font-weight: 450;
+}
+.brand .brand-dot {
+  color: #cf682f;
+  font-weight: 900;
+}
+.header-note,
+.small {
+  font-size: 0.85rem;
+  color: #586c60;
+}
 main {
-  max-width: 48rem;
-  margin: 15vh auto;
-  padding: 2rem;
+  max-width: 1120px;
+  min-height: 76vh;
+  margin: auto;
+  padding: 64px 24px;
+}
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
 }
 .eyebrow {
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  font-weight: 750;
 }
 h1 {
-  font-size: clamp(2rem, 6vw, 4rem);
-  line-height: 1.1;
+  font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+  line-height: 1.07;
+  letter-spacing: -0.045em;
+  font-weight: 550;
+  margin: 24px 0;
+}
+h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.035em;
+  margin: 0 0 10px;
 }
 p {
-  line-height: 1.6;
+  line-height: 1.65;
+}
+.intro > p:not(.eyebrow) {
+  max-width: 330px;
+}
+.intro-rule {
+  display: block;
+  width: 48px;
+  height: 3px;
+  background: #d39a64;
+  margin: 36px 0 22px;
+}
+.card {
+  background: #fff;
+  border: 1px solid #dfe5dc;
+  border-radius: 18px;
+  padding: 32px;
+  box-shadow: 0 16px 48px #193c3207;
+}
+.muted,
+.hint,
+.switch {
+  color: #596a60;
+  font-size: 0.88rem;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 24px 0 0;
+  min-width: 0;
+}
+label {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 650;
+  margin-bottom: 18px;
+}
+input,
+select {
+  display: block;
+  width: 100%;
+  padding: 12px 13px;
+  margin-top: 8px;
+  border: 1px solid #b6c4b9;
+  border-radius: 7px;
+  background: #fff;
+  color: #193c32;
+  font: inherit;
+}
+input:focus,
+select:focus {
+  outline: 2px solid #367052;
+  outline-offset: 2px;
+}
+button {
+  border: 0;
+  border-radius: 7px;
+  padding: 13px 20px;
+  background: #214f3b;
+  color: white;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  width: 100%;
+}
+button:hover {
+  background: #183c2c;
+}
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid #bd783b;
+  outline-offset: 4px;
+}
+.hint {
+  margin: -8px 0 18px;
+  font-size: 0.75rem;
+}
+.error {
+  color: #9f3029;
+  background: #fff1ed;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.86rem;
+}
+.switch {
+  text-align: center;
+  margin: 22px 0 0;
+}
+.switch a {
+  font-weight: 650;
+}
+.account {
+  max-width: 680px;
+  margin: 0 auto;
+}
+.account h1 {
+  font-size: 2.2rem;
+}
+dl {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 12px;
+  padding: 20px 0;
+  border-block: 1px solid #e0e6dd;
+}
+dt {
+  font-weight: 650;
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.role {
+  text-transform: capitalize;
+}
+.logout {
+  display: block;
+  margin-top: 28px;
+  max-width: 180px;
+}
+.notice {
+  padding: 50px;
+  text-align: center;
+}
+footer {
+  border-top: 1px solid #dce2d8;
+  margin: 0 6vw;
+  padding: 22px 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #596a60;
+}
+@media (max-width: 760px) {
+  main {
+    padding: 28px 20px;
+  }
+  .auth-layout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .intro h1 {
+    margin: 12px 0;
+  }
+  .intro-rule,
+  .intro .small {
+    display: none;
+  }
+  .intro > p:not(.eyebrow) {
+    max-width: none;
+  }
+  .card {
+    padding: 24px;
+  }
+  .header-note {
+    display: none;
+  }
 }
