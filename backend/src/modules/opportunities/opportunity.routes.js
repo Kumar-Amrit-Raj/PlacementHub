@@ -1,3 +1,4 @@
+import { StudentProfile } from '../profiles/student-profile.model.js';
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
@@ -15,6 +16,7 @@ import {
   controlSchema,
   idSchema,
   pageSchema,
+  studentPageSchema,
 } from './opportunity.validation.js';
 
 function pagination(req, res, next) {
@@ -111,13 +113,27 @@ export function createOpportunityRouter(tokens) {
       },
     );
   }
-  router.get('/', authorize('student'), pagination, async (req, res) => {
+  router.get('/', authorize('student'), async (req, res) => {
+    const parsed = studentPageSchema.safeParse(req.query);
+    if (!parsed.success)
+      return res.status(400).json({
+        error: 'Invalid opportunity filters or pagination parameters',
+      });
+    req.page = { limit: 20, ...parsed.data };
+    const profile = await StudentProfile.findOne({ user: req.user.id }).lean();
     res.json(
-      pageResult(await publishedOpportunities(req.page), req.page.limit),
+      pageResult(
+        await publishedOpportunities({ ...req.page, profile }),
+        req.page.limit,
+      ),
     );
   });
   router.get('/:id', authorize('student'), async (req, res) => {
-    const [opportunity] = await publishedOpportunities({ id: req.params.id });
+    const profile = await StudentProfile.findOne({ user: req.user.id }).lean();
+    const [opportunity] = await publishedOpportunities({
+      id: req.params.id,
+      profile,
+    });
     if (!opportunity) throw new OpportunityError('Opportunity not found', 404);
     res.json({ opportunity });
   });

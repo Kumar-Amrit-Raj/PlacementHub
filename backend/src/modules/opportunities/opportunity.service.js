@@ -1,3 +1,4 @@
+import { evaluateEligibility } from './eligibility.js';
 import mongoose from 'mongoose';
 import { Opportunity } from './opportunity.model.js';
 import { RecruiterProfile } from '../profiles/recruiter-profile.model.js';
@@ -57,11 +58,26 @@ export async function changeOpportunity(id, company, action, changes = {}) {
     );
   return updated;
 }
-export function publishedOpportunities({ id, after, limit = 20 } = {}) {
-  return Opportunity.aggregate([
+export async function publishedOpportunities({
+  id,
+  after,
+  limit = 20,
+  jobType,
+  location,
+  search,
+  eligibility,
+  profile,
+} = {}) {
+  // Treat user text literally rather than accepting regex syntax.
+  const literal = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pipeline = [
     {
       $match: {
         status: 'published',
+        ...(jobType ? { jobType } : {}),
+        ...(location
+          ? { location: { $regex: literal(location), $options: 'i' } }
+          : {}),
         deadline: { $gt: new Date() },
         ...(id
           ? { _id: new mongoose.Types.ObjectId(id) }
@@ -93,7 +109,20 @@ export function publishedOpportunities({ id, after, limit = 20 } = {}) {
         },
       },
     },
-    { $limit: id ? 1 : limit + 1 },
+    ...(search
+      ? [
+          {
+            $match: {
+              $or: ['title', 'description', 'companyProfile.companyName'].map(
+                (field) => ({
+                  [field]: { $regex: literal(search), $options: 'i' },
+                }),
+              ),
+            },
+          },
+        ]
+      : []),
+    ...(!eligibility || id ? [{ $limit: id ? 1 : limit + 1 }] : []),
     {
       $project: {
         _id: 1,
@@ -116,5 +145,18 @@ export function publishedOpportunities({ id, after, limit = 20 } = {}) {
         },
       },
     },
-  ]);
+  ];
+  const cursor = Opportunity.aggregate(pipeline).cursor({ batchSize: 100 });
+  const records = [];
+  try {
+    for await (const opportunity of cursor) {
+      const evaluation = evaluateEligibility(opportunity, profile);
+      if (!eligibility || evaluation.status === eligibility)
+        records.push({ ...opportunity, eligibility: evaluation });
+      if (records.length >= (id ? 1 : limit + 1)) break;
+    }
+  } finally {
+    await cursor.close();
+  }
+  return records;
 }

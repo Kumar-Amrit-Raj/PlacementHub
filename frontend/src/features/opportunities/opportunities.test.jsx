@@ -306,3 +306,145 @@ describe('opportunities', () => {
     expect(payload(draft, original)).toEqual({ title: 'New title' });
   });
 });
+
+it.each([
+  ['eligible', [], 'Eligible'],
+  [
+    'not_eligible',
+    [
+      {
+        field: 'cgpa',
+        code: 'mismatch',
+        message: 'Your CGPA is below the minimum of 7.',
+      },
+    ],
+    'Not eligible',
+  ],
+  [
+    'incomplete_profile',
+    [
+      {
+        field: 'branch',
+        code: 'missing',
+        message: 'Add your branch to your student profile.',
+      },
+    ],
+    'Incomplete profile',
+  ],
+])(
+  'shows server eligibility %s and reasons in student detail',
+  async (status, reasons, label) => {
+    setup('student', '/student/opportunities/one', () =>
+      response({ opportunity: { ...item, eligibility: { status, reasons } } }),
+    );
+    expect(await screen.findByText(label, { exact: true })).toBeVisible();
+    for (const reason of reasons)
+      expect(screen.getByText(reason.message)).toBeVisible();
+    if (reasons.length)
+      expect(
+        screen.getByRole('link', { name: 'Review your student profile' }),
+      ).toHaveAttribute('href', '/student/profile');
+    expect(
+      screen.queryByRole('button', { name: /^Apply$/ }),
+    ).not.toBeInTheDocument();
+  },
+);
+it('sends all applied filters, retains them across pagination, and clears the cursor on reset', async () => {
+  const urls = [];
+  const { actor } = setup('student', '/student/opportunities', (url) => {
+    urls.push(url);
+    return response({
+      opportunities: [
+        {
+          ...item,
+          _id: url.includes('after=') ? 'two' : 'one',
+          eligibility: { status: 'eligible', reasons: [] },
+        },
+      ],
+      nextCursor: url.includes('after=') ? null : 'one',
+    });
+  });
+  await screen.findByText('Developer');
+  await actor.type(screen.getByLabelText('Search opportunities'), 'C++');
+  await actor.type(screen.getByLabelText('Location filter'), 'Remote');
+  await actor.selectOptions(
+    screen.getByLabelText('Job type filter'),
+    'full-time',
+  );
+  await actor.selectOptions(
+    screen.getByLabelText('Eligibility filter'),
+    'eligible',
+  );
+  await actor.click(screen.getByRole('button', { name: 'Apply filters' }));
+  await waitFor(() => expect(urls.at(-1)).toContain('eligibility=eligible'));
+  let params = new URL(urls.at(-1), 'http://test').searchParams;
+  expect(params.get('search')).toBe('C++');
+  expect(params.get('location')).toBe('Remote');
+  expect(params.get('jobType')).toBe('full-time');
+  await actor.click(
+    screen.getByRole('button', { name: 'Load more opportunities' }),
+  );
+  await waitFor(() => expect(urls.at(-1)).toContain('after=one'));
+  expect(
+    new URL(urls.at(-1), 'http://test').searchParams.get('eligibility'),
+  ).toBe('eligible');
+  await actor.click(screen.getByRole('button', { name: 'Clear filters' }));
+  await waitFor(() => expect(urls.at(-1)).toBe('/opportunities?limit=20'));
+  expect(screen.getByLabelText('Search opportunities')).toHaveValue('');
+});
+it('shows a filter-specific empty state', async () => {
+  const { actor } = setup('student', '/student/opportunities', () =>
+    response({ opportunities: [], nextCursor: null }),
+  );
+  await screen.findByText('No current opportunities');
+  await actor.selectOptions(
+    screen.getByLabelText('Eligibility filter'),
+    'eligible',
+  );
+  await actor.click(screen.getByRole('button', { name: 'Apply filters' }));
+  expect(await screen.findByText('No matching opportunities')).toBeVisible();
+});
+it('removes expired results and never shows eligibility as permission to access expired detail', async () => {
+  setup('student', '/student/opportunities/one', () =>
+    response({
+      opportunity: {
+        ...item,
+        deadline: '2000-01-01T00:00:00Z',
+        eligibility: { status: 'eligible', reasons: [] },
+      },
+    }),
+  );
+  await screen.findByText('This opportunity has expired.');
+  expect(
+    screen.queryByText('Eligible', { exact: true }),
+  ).not.toBeInTheDocument();
+});
+it('ignores stale responses after new filters are applied', async () => {
+  let resolveOld;
+  const { actor } = setup('student', '/student/opportunities', (url) => {
+    if (!url.includes('search='))
+      return new Promise((resolve) => {
+        resolveOld = resolve;
+      });
+    return response({
+      opportunities: [{ ...item, title: 'Newest result' }],
+      nextCursor: null,
+    });
+  });
+  await screen.findByText('Loading opportunities…');
+  await actor.type(screen.getByLabelText('Search opportunities'), 'New');
+  await actor.click(screen.getByRole('button', { name: 'Apply filters' }));
+  await screen.findByText('Newest result');
+  resolveOld(
+    response({
+      opportunities: [{ ...item, title: 'Stale result' }],
+      nextCursor: 'old',
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByText('Stale result')).not.toBeInTheDocument(),
+  );
+  expect(
+    screen.queryByRole('button', { name: 'Load more opportunities' }),
+  ).not.toBeInTheDocument();
+});

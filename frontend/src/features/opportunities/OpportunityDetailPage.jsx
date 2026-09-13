@@ -1,3 +1,4 @@
+import EligibilityStatus from './EligibilityStatus.jsx';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
@@ -29,7 +30,10 @@ export default function OpportunityDetailPage() {
         if (active)
           setError(
             error.status === 404
-              ? { message: 'This opportunity is no longer available.' }
+              ? {
+                  message:
+                    'This opportunity is no longer available. It may have expired, been unpublished, or become hidden following company changes.',
+                }
               : error,
           );
       })
@@ -55,6 +59,7 @@ export default function OpportunityDetailPage() {
           <article className="card">
             <p className="eyebrow">{item.company?.companyName}</p>
             <h2>{item.title}</h2>
+            <EligibilityStatus eligibility={item.eligibility} />
             <OpportunityDetails item={item} />
           </article>
         ))
