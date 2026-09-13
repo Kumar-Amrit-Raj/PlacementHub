@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with authentication, initial-admin provisioning, and profile APIs and Phase 3B company approval. Opportunities and dashboards are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Opportunities and dashboards are not implemented.
 
 ## Requirements
 
@@ -105,8 +105,18 @@ Run `npm run lint -w frontend`, `npm test -w frontend`, and `npm run build -w fr
 
 ## Profile APIs
 
-Authenticated students and recruiters can read and update their own profile drafts. See [Profile API documentation](docs/profiles.md) for endpoints, field limits, ownership rules, and examples. These APIs are backend-only; no profile screens or dashboards are included.
+Authenticated students and recruiters can read and update their own profile drafts. See [Profile API documentation](docs/profiles.md) for endpoints, field limits, ownership rules, and examples. The frontend uses these APIs for role-protected profile viewing and editing.
 
 ## Company approval
 
 Admins can review pending recruiter/company profiles and approve or reject a specific profile version. Recruiters can view status and rejection reasons; edits trigger re-review. See [Company approval](docs/company-approval.md) for endpoints, concurrency rules, and audit behavior.
+
+## Profile and company review screens
+
+- Students: open **My profile** at `/student/profile` to create, view, edit, or clear profile fields.
+- Recruiters: open **Company profile** at `/recruiter/profile` to manage company details and see approval status and review notes. Saving changed details returns the company to pending review.
+- Admins: open **Company reviews** at `/admin/companies`. The paginated pending list links to `/admin/companies/:id`, with company details, review history, and approve/reject actions. Rejection requires a reason visible to the recruiter.
+- Failed review decisions require reloading details before retrying; submissions include the reviewed profile version to detect concurrent changes.
+- Empty profiles, empty review queues, loading, validation, save success, and retry states are included. Backend authorization remains authoritative. No dashboards or opportunity features are included.
+
+Frontend components live in `frontend/src/features/profiles/` and `frontend/src/features/companies/`. Run `npm test -w frontend`, `npm run lint -w frontend`, and `npm run build -w frontend`. Tests cover editable-field payloads, role restrictions, review decisions, pagination, and stale review recovery.

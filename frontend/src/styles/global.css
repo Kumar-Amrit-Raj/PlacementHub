@@ -232,3 +232,181 @@ footer {
     display: none;
   }
 }
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  font-size: 0.9rem;
+}
+nav a {
+  text-decoration: none;
+  padding-block: 8px;
+}
+nav a.active {
+  font-weight: 750;
+  text-decoration: underline;
+}
+.workspace-page {
+  max-width: 880px;
+  margin: auto;
+}
+.workspace-page h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+.workspace-page > .card,
+.approval-panel {
+  margin-block: 24px;
+}
+textarea {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 13px;
+  border: 1px solid #b6c4b9;
+  border-radius: 7px;
+  color: #193c32;
+  background: white;
+  font: inherit;
+  resize: vertical;
+}
+textarea:focus {
+  outline: 2px solid #367052;
+  outline-offset: 2px;
+}
+.profile-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+}
+.profile-form legend {
+  margin-bottom: 18px;
+}
+.profile-form .wide {
+  grid-column: 1 / -1;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.actions button,
+button.compact {
+  width: auto;
+}
+button.secondary {
+  background: #eaf0e8;
+  color: #214f3b;
+  border: 1px solid #bdcbbb;
+}
+button.secondary:hover {
+  background: #dfe8dc;
+}
+.success {
+  padding: 12px 16px;
+  background: #e5f2e6;
+  border-radius: 8px;
+}
+.approval-panel {
+  padding: 24px;
+  border: 1px solid #ccd9ca;
+  border-radius: 14px;
+  background: #eef2e9;
+}
+.badge {
+  display: inline-block;
+  border-radius: 40px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.badge-pending {
+  background: #fff0d1;
+  color: #76521b;
+}
+.badge-approved {
+  background: #d4ebd8;
+  color: #214f3b;
+}
+.badge-rejected {
+  background: #ffe1d9;
+  color: #922c25;
+}
+.profile-details {
+  grid-template-columns: minmax(130px, 1fr) 2fr;
+  font-size: 0.94rem;
+}
+.profile-details dd,
+.preserve-lines {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.company-list {
+  padding: 0;
+  list-style: none;
+}
+.company-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-block: 16px;
+}
+.company-list h2 {
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.company-list a {
+  flex-shrink: 0;
+  font-weight: 650;
+}
+.review-history summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.review-history li {
+  border-bottom: 1px solid #dce2d8;
+  padding-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.review-details h2 {
+  overflow-wrap: anywhere;
+}
+.empty-state {
+  text-align: center;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 600px) {
+  header {
+    align-items: flex-start;
+    gap: 18px;
+    flex-direction: column;
+  }
+  .profile-form {
+    grid-template-columns: 1fr;
+  }
+  .profile-details {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .profile-details dd {
+    margin-bottom: 14px;
+  }
+  .company-list li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .actions button {
+    flex: 1 1 auto;
+  }
+}
