@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with the Phase 1 foundation and Phase 2B backend authentication sessions. Frontend authentication and business features are not implemented.
+MERN placement-management application with Phase 2C frontend authentication and secure backend sessions. Dashboards, admin provisioning, and placement business features are not implemented.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ Vite proxies `/api` requests to the backend. If you change backend `PORT`, updat
 - Responses: 400 for invalid input, 409 for duplicate registration, 401 for incorrect credentials. Passwords and hashes are never returned.
 - JWTs expire after 15 minutes and are verified with a fixed algorithm, issuer, and audience. Configure `JWT_SECRET` before starting the backend.
 - Future protected routes can use `authenticate(tokens)` followed by `authorize('admin')`. Authentication reads the current user role from MongoDB; role middleware returns 403 for insufficient permission.
-- The User model supports student, recruiter, and admin. No admin creation endpoint or frontend authentication is included.
+- The User model supports student, recruiter, and admin. No admin creation endpoint is included.
 
 Authentication code lives in `backend/src/modules/auth/`, the User model in `backend/src/modules/users/`, and reusable middleware in `backend/src/middleware/`.
 
@@ -87,4 +87,18 @@ Registration and login set a `placementhub_refresh` cookie. Refresh tokens are r
 - Expired session records are removed by a MongoDB TTL index; authorization checks expiry directly without waiting for cleanup. Changing `JWT_SECRET` invalidates access JWTs but does not revoke stored refresh sessions.
 - Existing Phase 2A access tokens lack a session identifier and must be replaced by signing in again.
 
-No frontend authentication or admin provisioning is implemented.
+Admin provisioning is not implemented.
+
+## Frontend authentication
+
+- `/login` and `/register` provide sign-in and student/recruiter registration.
+- `/account` shows the signed-in user and logout control. `/student/account`, `/recruiter/account`, and `/admin/account` additionally require the matching role; these are account confirmation pages, not dashboards.
+- `AuthProvider` in `frontend/src/features/auth/` restores sessions once, including under React Strict Mode, and exposes loading, user, error, and pending-action state.
+- `frontend/src/lib/api.js` keeps access tokens only in memory. No tokens are placed in localStorage or sessionStorage; the HTTP-only refresh cookie is managed by the browser.
+- Reload restoration and successful login/registration load the current user through `GET /api/v1/auth/me`. Protected requests use `authClient.request('/path')`, refresh on 401, and retry once. A 403 does not trigger refresh.
+- Refresh requests are coalesced per tab. Cookie-changing requests are serialized with Web Locks across tabs where supported; browsers without Web Locks should use a single active tab. BroadcastChannel clears other tabs after login or logout where supported.
+- Failed or uncertain refreshes require sign-in instead of automatic repeated attempts. A failed logout remains visible as unconfirmed and can be retried.
+- Use the frontend origin for all auth requests through the Vite `/api` proxy. Production hosting must route `/api` to the backend and return `index.html` for frontend deep links; serve over HTTPS.
+- Frontend route guards are a navigation aid; backend authentication and role checks remain authoritative.
+
+Run `npm run lint -w frontend`, `npm test -w frontend`, and `npm run build -w frontend`. Use `npm run test:watch -w frontend` during development. The frontend suite uses Vitest, React Testing Library, and mocked HTTP responses to cover routes, form validation, session restoration, refresh races, and logout failures.
