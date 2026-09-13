@@ -7,7 +7,7 @@ All endpoints require `Authorization: Bearer <accessToken>`. Profiles are privat
 | GET / PATCH | `/api/v1/profiles/student/me`   | student      |
 | GET / PATCH | `/api/v1/profiles/recruiter/me` | recruiter    |
 
-Administrators cannot use these self-service endpoints. No listing, lookup by another user's ID, admin editing, or public company directory is provided.
+Administrators cannot use these self-service endpoints. Self-service endpoints offer no listing, cross-user lookup, or admin editing. Admin company review uses separate endpoints.
 
 ## Read and update behavior
 
@@ -55,7 +55,7 @@ Example PATCH body:
 | phone                     | Same phone rules as students                                        |
 | contactEmail              | Valid email up to 254 characters, normalized to lowercase, or empty |
 
-A recruiter owns one company draft in this phase. Recruiters cannot claim an existing profile or share ownership by submitting a company/user ID. Company names are not unique and do not establish company identity or approval. Shared company membership, approval, jobs, opportunities, and dashboards remain out of scope.
+A recruiter owns one company draft in this phase. Recruiters cannot claim an existing profile or share ownership by submitting a company/user ID. Company names are not unique; entering a name does not automatically grant approval. Shared company membership, jobs, opportunities, and dashboards remain out of scope. Company approval is documented in [Company approval](company-approval.md).
 
 Profile data does not change the User account's name, login email, password, or role. URLs are stored only; the server does not fetch them.
 

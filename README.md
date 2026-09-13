@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with authentication, initial-admin provisioning, and Phase 3A student and recruiter/company profile APIs. Company approval, opportunities, and dashboards are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, and profile APIs and Phase 3B company approval. Opportunities and dashboards are not implemented.
 
 ## Requirements
 
@@ -106,3 +106,7 @@ Run `npm run lint -w frontend`, `npm test -w frontend`, and `npm run build -w fr
 ## Profile APIs
 
 Authenticated students and recruiters can read and update their own profile drafts. See [Profile API documentation](docs/profiles.md) for endpoints, field limits, ownership rules, and examples. These APIs are backend-only; no profile screens or dashboards are included.
+
+## Company approval
+
+Admins can review pending recruiter/company profiles and approve or reject a specific profile version. Recruiters can view status and rejection reasons; edits trigger re-review. See [Company approval](docs/company-approval.md) for endpoints, concurrency rules, and audit behavior.
