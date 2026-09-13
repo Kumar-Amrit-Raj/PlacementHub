@@ -14,6 +14,14 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     passwordHash: { type: String, required: true, select: false },
+    bootstrapKey: {
+      type: String,
+      enum: ['initial-admin'],
+      immutable: true,
+      select: false,
+      unique: true,
+      sparse: true,
+    },
     role: {
       type: String,
       enum: USER_ROLES,
@@ -26,6 +34,7 @@ const userSchema = new mongoose.Schema(
     toJSON: {
       transform(_document, value) {
         delete value.passwordHash;
+        delete value.bootstrapKey;
         delete value.__v;
         return value;
       },

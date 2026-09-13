@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with Phase 2C frontend authentication and secure backend sessions. Dashboards, admin provisioning, and placement business features are not implemented.
+MERN placement-management application with frontend authentication, secure sessions, and Phase 2D initial-admin provisioning. Dashboards and placement business features are not implemented.
 
 ## Requirements
 
@@ -87,7 +87,7 @@ Registration and login set a `placementhub_refresh` cookie. Refresh tokens are r
 - Expired session records are removed by a MongoDB TTL index; authorization checks expiry directly without waiting for cleanup. Changing `JWT_SECRET` invalidates access JWTs but does not revoke stored refresh sessions.
 - Existing Phase 2A access tokens lack a session identifier and must be replaced by signing in again.
 
-Admin provisioning is not implemented.
+Initial admins are provisioned only through the operator CLI. See [Admin provisioning](docs/admin-provisioning.md) for local PowerShell and production secret-manager workflows. No public admin signup endpoint exists.
 
 ## Frontend authentication
 

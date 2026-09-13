@@ -1,4 +1,5 @@
 import express from 'express';
+import { createAdminRouter } from './modules/admin/admin.routes.js';
 import { isDatabaseReady } from './config/database.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
 import { createTokenService } from './modules/auth/token.service.js';
@@ -9,12 +10,12 @@ export function createApp({
   nodeEnv = 'development',
 } = {}) {
   const app = express();
+  const tokens = createTokenService(jwtSecret);
   app.disable('x-powered-by');
   app.use(express.json({ limit: '100kb' }));
-  app.use(
-    '/api/v1/auth',
-    createAuthRouter(createTokenService(jwtSecret), nodeEnv),
-  );
+  app.use('/api/v1/auth', createAuthRouter(tokens, nodeEnv));
+
+  app.use('/api/v1/admin', createAdminRouter(tokens));
 
   app.get('/api/v1/health', (_req, res) => {
     const ready = databaseReady();
