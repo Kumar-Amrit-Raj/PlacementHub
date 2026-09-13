@@ -16,6 +16,11 @@ export default function RoleNavigation() {
       {['student', 'recruiter'].includes(user.role) && (
         <NavLink to={'/' + user.role + '/opportunities'}>Opportunities</NavLink>
       )}
+      {['student', 'recruiter'].includes(user.role) && (
+        <NavLink to={'/' + user.role + '/applications'}>
+          {user.role === 'student' ? 'My Applications' : 'Applications'}
+        </NavLink>
+      )}
     </nav>
   );
 }
