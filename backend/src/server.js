@@ -4,6 +4,8 @@ import { connectDatabase, disconnectDatabase } from './config/database.js';
 
 import { User } from './modules/users/user.model.js';
 import { AuthSession } from './modules/auth/session.model.js';
+import { StudentProfile } from './modules/profiles/student-profile.model.js';
+import { RecruiterProfile } from './modules/profiles/recruiter-profile.model.js';
 
 let server;
 let stopping = false;
@@ -37,8 +39,13 @@ async function start() {
       'MongoDB connection failed. Check MONGODB_URI and database availability.',
     );
   }
-  // Ensure the unique email index exists before accepting registrations.
-  await Promise.all([User.init(), AuthSession.init()]);
+  // Ensure ownership and identity indexes exist before accepting writes.
+  await Promise.all([
+    User.init(),
+    AuthSession.init(),
+    StudentProfile.init(),
+    RecruiterProfile.init(),
+  ]);
   server = createApp({
     jwtSecret: config.jwtSecret,
     nodeEnv: config.nodeEnv,
