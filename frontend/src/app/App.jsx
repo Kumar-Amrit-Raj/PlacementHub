@@ -1,3 +1,4 @@
+import ApplicationsPage from '../features/applications/ApplicationsPage.jsx';
 import OpportunityListPage from '../features/opportunities/OpportunityListPage.jsx';
 import OpportunityEditorPage from '../features/opportunities/OpportunityEditorPage.jsx';
 import OpportunityDetailPage from '../features/opportunities/OpportunityDetailPage.jsx';
@@ -37,6 +38,10 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute roles={['student']} />}>
             <Route
+              path="/student/applications"
+              element={<ApplicationsPage />}
+            />
+            <Route
               path="/student/opportunities"
               element={<OpportunityListPage />}
             />
@@ -50,6 +55,10 @@ export default function App() {
             />
           </Route>
           <Route element={<ProtectedRoute roles={['recruiter']} />}>
+            <Route
+              path="/recruiter/applications"
+              element={<ApplicationsPage recruiter />}
+            />
             <Route
               path="/recruiter/opportunities"
               element={<OpportunityListPage recruiter />}

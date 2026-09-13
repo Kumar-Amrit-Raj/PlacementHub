@@ -31,6 +31,8 @@ function setup(role, path, handler, profile = company) {
     if (url.endsWith('/auth/me'))
       return response({ user: { id: 'u', name: 'Tester', role } });
     if (url.endsWith('/profiles/recruiter/me')) return response({ profile });
+    if (url.includes('/applications/mine'))
+      return response({ applications: [], nextCursor: null });
     return handler(url.replace('/api/v1', ''), options);
   });
   render(
@@ -68,9 +70,7 @@ describe('opportunities', () => {
     );
     expect(await screen.findByText('Build web tools')).toBeVisible();
     expect(screen.getByText('CSE')).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: /Apply/ }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Apply/ })).toBeInTheDocument();
   });
   it('shows loading, error retry, and an empty list', async () => {
     let release;
@@ -346,7 +346,7 @@ it.each([
       ).toHaveAttribute('href', '/student/profile');
     expect(
       screen.queryByRole('button', { name: /^Apply$/ }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
   },
 );
 it('sends all applied filters, retains them across pagination, and clears the cursor on reset', async () => {

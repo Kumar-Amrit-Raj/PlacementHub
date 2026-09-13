@@ -252,6 +252,11 @@ export default function OpportunityListPage({ recruiter = false }) {
             <div>
               {recruiter && <OpportunityStatus item={item} company={company} />}
               <h2>{item.title}</h2>
+              {recruiter && (
+                <Link to={'/recruiter/applications?opportunityId=' + item._id}>
+                  View applicants
+                </Link>
+              )}
               {!recruiter && (
                 <>
                   <p>{item.company?.companyName}</p>

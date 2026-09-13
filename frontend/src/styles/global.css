@@ -451,3 +451,59 @@ button.secondary:hover {
 .opportunity-filters {
   margin-block: 24px;
 }
+.application-panel {
+  margin-block: 24px;
+  padding: 24px;
+  border: 1px solid #ccd9ca;
+  border-radius: 12px;
+}
+.application-panel .actions {
+  align-items: center;
+}
+.application-card {
+  margin-block: 24px;
+  overflow-wrap: anywhere;
+}
+.application-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.application-status {
+  flex-shrink: 0;
+}
+.status-applied {
+  background: #e6edf6;
+  color: #264a70;
+}
+.status-shortlisted,
+.status-interview {
+  background: #fff0d1;
+  color: #76521b;
+}
+.status-selected {
+  background: #d4ebd8;
+  color: #214f3b;
+}
+.status-rejected {
+  background: #ffe1d9;
+  color: #922c25;
+}
+.application-history {
+  padding-left: 22px;
+  line-height: 1.9;
+}
+.application-card summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+@media (max-width: 600px) {
+  .application-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .application-panel {
+    padding: 16px;
+  }
+}

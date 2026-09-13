@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4B adds opportunity management and student browsing on the Phase 4A APIs. Phase 5A adds backend applications; the application frontend and dashboards are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4B adds opportunity management and student browsing on the Phase 4A APIs. Phase 5B adds student applications and recruiter applicant management. Final dashboards are not implemented.
 
 ## Requirements
 
@@ -143,3 +143,14 @@ Student opportunity cards and details show eligible, not eligible, or incomplete
 ## Backend applications (Phase 5A)
 
 Students can apply once to a visible, unexpired opportunity when their current profile is eligible. Recruiters can list their company’s applications and move them through audited, forward-only statuses. See [Applications API](docs/applications.md) for endpoints, transitions, errors, snapshot behavior, and the MongoDB replica-set requirement. No application frontend or dashboards are included.
+
+## Applications UI (Phase 5B)
+
+- Eligible students can apply from opportunity details. Submission is disabled while checking existing applications, for ineligible/incomplete profiles, and after an application is found. Expired or unavailable details offer no apply control. The backend remains authoritative at submission time.
+- `/student/applications` lists submitted titles, companies, dates, current statuses, and history from immutable submission snapshots.
+- `/recruiter/applications` lists company applicants with student snapshot data. Use **View applicants** on an owned opportunity to filter by `opportunityId`.
+- Recruiter controls expose only legal next states, send `expectedVersion`, and require refreshing the list after conflicts or unconfirmed updates. Terminal selected/rejected applications have no status controls.
+- Failed or uncertain submissions link to My Applications; check the list before retrying. Existing-application checks traverse the paginated student API without adding backend endpoints.
+- Role-aware navigation, pagination, loading, empty, error, success and responsive states are included. Run `npm test -w frontend`, `npm run lint -w frontend`, and `npm run build -w frontend`. Browser checks use a disposable replica set.
+
+No Phase 5C hardening or final dashboards are included.

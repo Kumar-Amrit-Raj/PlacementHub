@@ -1,3 +1,4 @@
+import ApplyPanel from '../applications/ApplyPanel.jsx';
 import EligibilityStatus from './EligibilityStatus.jsx';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
@@ -61,6 +62,7 @@ export default function OpportunityDetailPage() {
             <h2>{item.title}</h2>
             <EligibilityStatus eligibility={item.eligibility} />
             <OpportunityDetails item={item} />
+            <ApplyPanel key={item._id} opportunity={item} />
           </article>
         ))
       )}
