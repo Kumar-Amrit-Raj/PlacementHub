@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4A adds backend opportunity APIs; applications, opportunity screens, and dashboards are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4B adds opportunity management and student browsing on the Phase 4A APIs. Applications and dashboards are not implemented.
 
 ## Requirements
 
@@ -123,4 +123,15 @@ Frontend components live in `frontend/src/features/profiles/` and `frontend/src/
 
 ## Opportunities / jobs
 
-Recruiters can create and manage their own company’s drafts and publish opportunities after company approval. Students can list and read current published opportunities; expired records and publications for unapproved or changed company profiles are hidden. See [Opportunities API](docs/opportunities.md) for routes, fields, pagination, and publishing rules. No application endpoints or opportunity frontend are included.
+Recruiters can create and manage their own company’s drafts and publish opportunities after company approval. Students can list and read current published opportunities; expired records and publications for unapproved or changed company profiles are hidden. See [Opportunities API](docs/opportunities.md) for routes, fields, pagination, and publishing rules. No application endpoints are included.
+
+## Opportunity screens (Phase 4B)
+
+- Recruiters: `/recruiter/opportunities` lists owned records. Create at `/recruiter/opportunities/new` or edit at `/recruiter/opportunities/:id/edit`. Publishing and unpublishing are separate controls on the edit page.
+- Students: `/student/opportunities` lists current opportunities with pagination; `/student/opportunities/:id` shows company, compensation, deadline, description, and eligibility.
+- The Opportunities navigation link is shown only for students and recruiters. Backend ownership and authorization remain authoritative.
+- Deadlines are entered and displayed in local time, sent to the API as UTC timestamps. Draft, published, expired, and hidden publication states are distinguished. Company edits require reapproval and explicit republication.
+- Save or discard edits before changing publication state. Failed or uncertain publish actions require a reload; check the owned list before retrying an uncertain create request. Saving content returns a publication to draft.
+- Tests cover payload types, date conversion, role guards, pagination, validation, approval restrictions, and recovery. Run `npm test -w frontend`, `npm run lint -w frontend`, and `npm run build -w frontend`. Browser verification uses an isolated temporary database.
+
+No applications, apply actions, or final dashboards are included.
