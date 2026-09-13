@@ -1,6 +1,10 @@
 import { Link, Navigate, Route, Routes } from 'react-router';
 import { GuestRoute, ProtectedRoute } from '../features/auth/RouteGuards.jsx';
 import AuthPage from '../features/auth/AuthPage.jsx';
+import RoleNavigation from './RoleNavigation.jsx';
+import ProfilePage from '../features/profiles/ProfilePage.jsx';
+import CompanyListPage from '../features/companies/CompanyListPage.jsx';
+import CompanyReviewPage from '../features/companies/CompanyReviewPage.jsx';
 import AccountPage from '../features/auth/AccountPage.jsx';
 
 export default function App() {
@@ -13,7 +17,7 @@ export default function App() {
             .
           </span>
         </Link>
-        <span className="header-note">Make room for what’s next.</span>
+        <RoleNavigation />
       </header>
       <main>
         <Routes>
@@ -27,6 +31,25 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute />}>
             <Route path="/account" element={<AccountPage />} />
+          </Route>
+          <Route element={<ProtectedRoute roles={['student']} />}>
+            <Route
+              path="/student/profile"
+              element={<ProfilePage role="student" />}
+            />
+          </Route>
+          <Route element={<ProtectedRoute roles={['recruiter']} />}>
+            <Route
+              path="/recruiter/profile"
+              element={<ProfilePage role="recruiter" />}
+            />
+          </Route>
+          <Route element={<ProtectedRoute roles={['admin']} />}>
+            <Route path="/admin/companies" element={<CompanyListPage />} />
+            <Route
+              path="/admin/companies/:id"
+              element={<CompanyReviewPage />}
+            />
           </Route>
           {['student', 'recruiter', 'admin'].map((role) => (
             <Route key={role} element={<ProtectedRoute roles={[role]} />}>
