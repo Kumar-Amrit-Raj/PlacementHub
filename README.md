@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Opportunities and dashboards are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, profiles, company approval, and Phase 3C profile/review screens. Phase 4A adds backend opportunity APIs; applications, opportunity screens, and dashboards are not implemented.
 
 ## Requirements
 
@@ -120,3 +120,7 @@ Admins can review pending recruiter/company profiles and approve or reject a spe
 - Empty profiles, empty review queues, loading, validation, save success, and retry states are included. Backend authorization remains authoritative. No dashboards or opportunity features are included.
 
 Frontend components live in `frontend/src/features/profiles/` and `frontend/src/features/companies/`. Run `npm test -w frontend`, `npm run lint -w frontend`, and `npm run build -w frontend`. Tests cover editable-field payloads, role restrictions, review decisions, pagination, and stale review recovery.
+
+## Opportunities / jobs
+
+Recruiters can create and manage their own company’s drafts and publish opportunities after company approval. Students can list and read current published opportunities; expired records and publications for unapproved or changed company profiles are hidden. See [Opportunities API](docs/opportunities.md) for routes, fields, pagination, and publishing rules. No application endpoints or opportunity frontend are included.
