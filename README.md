@@ -1,6 +1,6 @@
 # PlacementHub
 
-MERN placement-management application with frontend authentication, secure sessions, and Phase 2D initial-admin provisioning. Dashboards and placement business features are not implemented.
+MERN placement-management application with authentication, initial-admin provisioning, and Phase 3A student and recruiter/company profile APIs. Company approval, opportunities, and dashboards are not implemented.
 
 ## Requirements
 
@@ -102,3 +102,7 @@ Initial admins are provisioned only through the operator CLI. See [Admin provisi
 - Frontend route guards are a navigation aid; backend authentication and role checks remain authoritative.
 
 Run `npm run lint -w frontend`, `npm test -w frontend`, and `npm run build -w frontend`. Use `npm run test:watch -w frontend` during development. The frontend suite uses Vitest, React Testing Library, and mocked HTTP responses to cover routes, form validation, session restoration, refresh races, and logout failures.
+
+## Profile APIs
+
+Authenticated students and recruiters can read and update their own profile drafts. See [Profile API documentation](docs/profiles.md) for endpoints, field limits, ownership rules, and examples. These APIs are backend-only; no profile screens or dashboards are included.

@@ -1,4 +1,5 @@
 import express from 'express';
+import { createProfileRouter } from './modules/profiles/profile.routes.js';
 import { createAdminRouter } from './modules/admin/admin.routes.js';
 import { isDatabaseReady } from './config/database.js';
 import { createAuthRouter } from './modules/auth/auth.routes.js';
@@ -16,6 +17,7 @@ export function createApp({
   app.use('/api/v1/auth', createAuthRouter(tokens, nodeEnv));
 
   app.use('/api/v1/admin', createAdminRouter(tokens));
+  app.use('/api/v1/profiles', createProfileRouter(tokens));
 
   app.get('/api/v1/health', (_req, res) => {
     const ready = databaseReady();
