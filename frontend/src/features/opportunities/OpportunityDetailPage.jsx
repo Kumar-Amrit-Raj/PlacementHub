@@ -62,7 +62,11 @@ export default function OpportunityDetailPage() {
             <h2>{item.title}</h2>
             <EligibilityStatus eligibility={item.eligibility} />
             <OpportunityDetails item={item} />
-            <ApplyPanel key={item._id} opportunity={item} />
+            <ApplyPanel
+              key={item._id}
+              opportunity={item}
+              onRefresh={() => setReload((value) => value + 1)}
+            />
           </article>
         ))
       )}

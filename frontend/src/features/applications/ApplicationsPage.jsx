@@ -126,6 +126,7 @@ export default function ApplicationsPage({ recruiter = false }) {
           key={item._id + ':' + reload}
           application={item}
           recruiter={recruiter}
+          onReload={() => setReload((value) => value + 1)}
           onUpdate={(updated) =>
             setItems((current) =>
               current.map((old) => (old._id === updated._id ? updated : old)),

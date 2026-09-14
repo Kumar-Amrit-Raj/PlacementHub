@@ -303,3 +303,165 @@ it.each([
   await screen.findByRole('heading', { name: 'Access restricted' });
   expect(handler).not.toHaveBeenCalled();
 });
+
+it('refreshes opportunity eligibility as well as duplicates before retrying after 422', async () => {
+  let reads = 0;
+  const { actor } = setup(
+    'student',
+    '/student/opportunities/job',
+    (url, options) => {
+      if (options.method === 'POST')
+        return response(
+          {
+            error: 'Eligibility changed',
+            eligibility: {
+              status: 'not_eligible',
+              reasons: [{ field: 'cgpa', message: 'Minimum CGPA is 7.' }],
+            },
+          },
+          422,
+        );
+      if (url === '/opportunities/job') {
+        reads++;
+        return response({
+          opportunity:
+            reads === 1
+              ? item
+              : {
+                  ...item,
+                  eligibility: { status: 'not_eligible', reasons: [] },
+                },
+        });
+      }
+      return response({ applications: [], nextCursor: null });
+    },
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Apply', exact: true }),
+    ).toBeEnabled(),
+  );
+  await actor.click(screen.getByRole('button', { name: 'Apply', exact: true }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Minimum CGPA is 7.',
+  );
+  await actor.click(
+    screen.getByRole('button', {
+      name: 'Refresh opportunity and application status',
+    }),
+  );
+  await screen.findByText(
+    'Meet the eligibility requirements and complete the required profile fields before applying.',
+  );
+  expect(reads).toBe(2);
+  expect(
+    screen.getByRole('button', { name: 'Apply', exact: true }),
+  ).toBeDisabled();
+});
+it('finds a committed application after an uncertain submission without reposting', async () => {
+  let posted = false,
+    posts = 0;
+  const { actor } = setup(
+    'student',
+    '/student/opportunities/job',
+    (url, options) => {
+      if (options.method === 'POST') {
+        posted = true;
+        posts++;
+        throw Error('Network interrupted');
+      }
+      return response(
+        url === '/opportunities/job'
+          ? { opportunity: item }
+          : { applications: posted ? [application] : [], nextCursor: null },
+      );
+    },
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Apply', exact: true }),
+    ).toBeEnabled(),
+  );
+  await actor.click(screen.getByRole('button', { name: 'Apply', exact: true }));
+  await screen.findByRole('alert');
+  await actor.click(
+    screen.getByRole('button', {
+      name: 'Refresh opportunity and application status',
+    }),
+  );
+  expect(
+    await screen.findByRole('button', { name: 'Already applied' }),
+  ).toBeDisabled();
+  expect(posts).toBe(1);
+});
+it('does not overwrite freshly loaded recruiter data with an old in-flight response', async () => {
+  let resolveUpdate,
+    reads = 0;
+  const { actor } = setup(
+    'recruiter',
+    '/recruiter/applications',
+    (url, options) => {
+      if (options.method === 'PATCH')
+        return new Promise((resolve) => {
+          resolveUpdate = resolve;
+        });
+      reads++;
+      return response({
+        applications: [
+          reads === 1
+            ? application
+            : { ...application, status: 'selected', version: 3 },
+        ],
+        nextCursor: null,
+      });
+    },
+  );
+  await screen.findByRole('button', { name: 'Shortlist' });
+  await actor.click(screen.getByRole('button', { name: 'Shortlist' }));
+  await actor.click(
+    screen.getByRole('button', { name: 'Refresh applications' }),
+  );
+  await screen.findByText('This application has reached a final status.');
+  resolveUpdate(
+    response({
+      application: { ...application, status: 'shortlisted', version: 1 },
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('button', { name: 'Move to interview' }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(screen.getByText('selected', { exact: true })).toBeVisible();
+});
+it('recovers a failed next page without losing existing student applications', async () => {
+  let attempts = 0;
+  const { actor } = setup('student', '/student/applications', (url) => {
+    if (url.includes('after=')) {
+      attempts++;
+      return attempts === 1
+        ? response({ error: 'Temporary failure' }, 503)
+        : response({
+            applications: [
+              {
+                ...application,
+                _id: 'two',
+                snapshot: { ...application.snapshot, title: 'Second' },
+              },
+            ],
+            nextCursor: null,
+          });
+    }
+    return response({ applications: [application], nextCursor: 'app' });
+  });
+  await screen.findByText('Engineer');
+  await actor.click(
+    screen.getByRole('button', { name: 'Load more applications' }),
+  );
+  await screen.findByRole('alert');
+  expect(screen.getByText('Engineer')).toBeVisible();
+  await actor.click(
+    screen.getByRole('button', { name: 'Load more applications' }),
+  );
+  await screen.findByText('Second');
+});

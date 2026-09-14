@@ -1,8 +1,9 @@
 export class ApiError extends Error {
-  constructor(message, status = 0, details = []) {
+  constructor(message, status = 0, details = [], eligibility) {
     super(message);
     this.status = status;
     this.details = details;
+    this.eligibility = eligibility;
   }
 }
 
@@ -61,6 +62,7 @@ export function createAuthClient({
         data?.error || 'The request failed. Please try again.',
         response.status,
         data?.details,
+        data?.eligibility,
       );
     return data;
   }
