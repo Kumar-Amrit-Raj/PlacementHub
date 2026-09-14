@@ -496,3 +496,36 @@ test('historical applications remain visible after expiry and company approval l
   );
   assert.equal((await change(item._id, 'shortlisted', 0)).status, 200);
 });
+
+test('student detail has an authoritative user-scoped applied flag and preserves availability rules', async () => {
+  const path = '/opportunities/' + opportunity.id;
+  assert.equal(
+    (await api(path, 'GET', undefined, 'student')).body.opportunity.hasApplied,
+    false,
+  );
+  await apply();
+  assert.equal(
+    (await api(path, 'GET', undefined, 'student')).body.opportunity.hasApplied,
+    true,
+  );
+  const second = await User.create({
+    name: 'Second student',
+    email: 'second@example.test',
+    passwordHash: 'unused',
+    role: 'student',
+  });
+  const { session } = await createSession(second);
+  actors.second = { user: second, token: tokens.sign(second, session.id) };
+  assert.equal(
+    (await api(path, 'GET', undefined, 'second')).body.opportunity.hasApplied,
+    false,
+  );
+  for (const actor of ['recruiter', 'admin', null])
+    assert.equal(
+      (await api(path, 'GET', undefined, actor)).status,
+      actor ? 403 : 401,
+    );
+  await Opportunity.updateOne({ _id: opportunity.id }, { status: 'draft' });
+  assert.equal((await api(path, 'GET', undefined, 'student')).status, 404);
+  assert.equal((await apply()).status, 404);
+});

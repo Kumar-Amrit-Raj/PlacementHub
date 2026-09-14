@@ -11,10 +11,10 @@ import {
   protectSessionMutation,
 } from './session.cookie.js';
 
-export function createAuthRouter(tokens, nodeEnv) {
+export function createAuthRouter(tokens, nodeEnv, cookieSameSite) {
   const router = Router();
   const auth = createAuthService(tokens);
-  const cookieOptions = refreshCookieOptions(nodeEnv);
+  const cookieOptions = refreshCookieOptions(nodeEnv, cookieSameSite);
   router.use(cookieParser());
   router.use((_req, res, next) => {
     res.set('Cache-Control', 'no-store');

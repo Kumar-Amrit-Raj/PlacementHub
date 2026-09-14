@@ -154,6 +154,7 @@ test('approval records actor, time, version and snapshot atomically', async () =
   assert.equal(detail.approvalHistory.length, 1);
   const event = detail.approvalHistory[0];
   assert.equal(event.actor, actors.admin.user.id);
+  assert.equal(event.actorLabel, actors.admin.user.name);
   assert.equal(event.profileVersion, 0);
   assert.equal(event.reason, 'Verified details');
   assert.ok(Number.isFinite(Date.parse(event.at)));
@@ -373,4 +374,19 @@ test('history capacity rejects further decisions without discarding audit record
   const detail = (await api('/admin/companies/' + company._id)).body.company;
   assert.equal(detail.approvalStatus, 'pending');
   assert.equal(detail.approvalHistory.length, 100);
+});
+
+test('admin review labels fall back safely after a reviewer is deleted', async () => {
+  const company = await create();
+  await decision(company._id, 'approve', { expectedVersion: 0 }, 'otherAdmin');
+  await User.deleteOne({ _id: actors.otherAdmin.user.id });
+  const result = await api('/admin/companies/' + company._id);
+  assert.equal(
+    result.body.company.approvalHistory[0].actorLabel,
+    'Administrator',
+  );
+  assert.equal(
+    result.body.company.approvalHistory[0].actor,
+    actors.otherAdmin.user.id,
+  );
 });

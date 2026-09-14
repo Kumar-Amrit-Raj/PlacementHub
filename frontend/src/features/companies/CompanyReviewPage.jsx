@@ -129,9 +129,10 @@ export default function CompanyReviewPage() {
                   will be visible to the recruiter. An approval note is
                   optional.
                 </p>
-                <label>
+                <label htmlFor="review-reason">
                   Review reason
                   <textarea
+                    id="review-reason"
                     rows={4}
                     maxLength={1000}
                     value={reason}
@@ -181,7 +182,9 @@ export default function CompanyReviewPage() {
                           Version {review.profileVersion} ·{' '}
                           {new Date(review.at).toLocaleString()}
                         </p>
-                        <p className="muted">Reviewer: {review.actor}</p>
+                        <p className="muted">
+                          Reviewer: {review.actorLabel || 'Administrator'}
+                        </p>
                         <p className="preserve-lines">
                           {review.reason || 'No note provided.'}
                         </p>

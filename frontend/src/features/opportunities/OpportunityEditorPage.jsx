@@ -126,6 +126,7 @@ export default function OpportunityEditorPage() {
     }
   }
   const input = (name) => ({
+    id: 'opportunity-' + name,
     name,
     value: draft[name],
     onChange: (event) =>
@@ -233,11 +234,11 @@ export default function OpportunityEditorPage() {
               </p>
               <fieldset disabled={busy || blocked} className="profile-form">
                 <legend className="sr-only">Opportunity fields</legend>
-                <label>
+                <label htmlFor="opportunity-title">
                   Title
                   <input {...input('title')} required maxLength={200} />
                 </label>
-                <label>
+                <label htmlFor="opportunity-jobType">
                   Job type
                   <select {...input('jobType')}>
                     {jobTypes.map((type) => (
@@ -245,7 +246,7 @@ export default function OpportunityEditorPage() {
                     ))}
                   </select>
                 </label>
-                <label className="wide">
+                <label htmlFor="opportunity-description" className="wide">
                   Description
                   <textarea
                     {...input('description')}
@@ -254,11 +255,11 @@ export default function OpportunityEditorPage() {
                     rows={6}
                   />
                 </label>
-                <label>
+                <label htmlFor="opportunity-location">
                   Location
                   <input {...input('location')} required maxLength={200} />
                 </label>
-                <label>
+                <label htmlFor="opportunity-compensation">
                   Compensation
                   <input
                     {...input('compensation')}
@@ -270,7 +271,7 @@ export default function OpportunityEditorPage() {
                     Include currency and pay period, or state unpaid.
                   </span>
                 </label>
-                <label>
+                <label htmlFor="opportunity-deadline">
                   Deadline (local time)
                   <input
                     {...input('deadline')}
@@ -278,7 +279,7 @@ export default function OpportunityEditorPage() {
                     type="datetime-local"
                   />
                 </label>
-                <label>
+                <label htmlFor="opportunity-minimumCgpa">
                   Minimum CGPA
                   <input
                     {...input('minimumCgpa')}
@@ -288,7 +289,7 @@ export default function OpportunityEditorPage() {
                     step="any"
                   />
                 </label>
-                <label>
+                <label htmlFor="opportunity-graduationYear">
                   Graduation year
                   <input
                     {...input('graduationYear')}
@@ -298,7 +299,7 @@ export default function OpportunityEditorPage() {
                     step="1"
                   />
                 </label>
-                <label>
+                <label htmlFor="opportunity-allowedBranches">
                   Allowed branches (comma-separated)
                   <input {...input('allowedBranches')} />
                 </label>

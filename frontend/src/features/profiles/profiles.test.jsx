@@ -168,7 +168,7 @@ describe('profiles and company reviews', () => {
       }
       return response({ companies: [], nextCursor: null });
     });
-    await screen.findByText('Acme');
+    await screen.findByRole('heading', { name: 'Acme' });
     await actor.click(
       screen.getByRole('button', { name: 'Load more companies' }),
     );
@@ -279,4 +279,34 @@ it('shows a retryable admin detail error without decision controls', async () =>
   expect(await screen.findByRole('alert')).toHaveTextContent(
     'Company profile not found',
   );
+});
+
+it('renders a reviewer name and safe fallback without raw actor IDs', async () => {
+  const actor = setup('admin', '/admin/companies/abc', () =>
+    response({
+      company: {
+        ...company,
+        approvalHistory: [
+          {
+            actor: '507f1f77bcf86cd799439011',
+            actorLabel: 'Review Administrator',
+            status: 'approved',
+            profileVersion: 1,
+            at: '2026-01-01',
+          },
+          {
+            actor: '507f1f77bcf86cd799439012',
+            status: 'rejected',
+            profileVersion: 2,
+            at: '2026-01-02',
+          },
+        ],
+      },
+    }),
+  );
+  await screen.findByRole('heading', { name: 'Acme' });
+  await actor.click(screen.getByText('Review history (2)'));
+  expect(screen.getByText('Reviewer: Review Administrator')).toBeVisible();
+  expect(screen.getByText('Reviewer: Administrator')).toBeVisible();
+  expect(screen.queryByText(/507f1f77/)).not.toBeInTheDocument();
 });

@@ -153,3 +153,23 @@ describe('authentication API client', () => {
     expect(exclusive).toHaveBeenCalledTimes(1);
   });
 });
+
+it('uses a configured backend origin with credentialed refresh and current-user requests', async () => {
+  const fetcher = vi.fn(async (url) =>
+    response(url.endsWith('/refresh') ? { accessToken: 'fixture' } : { user }),
+  );
+  const client = createAuthClient({
+    apiBaseUrl: 'https://api.example.test/',
+    fetcher,
+  });
+  await client.initialize();
+  expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+    'https://api.example.test/api/v1/auth/refresh',
+    'https://api.example.test/api/v1/auth/me',
+  ]);
+  expect(
+    fetcher.mock.calls.every(
+      ([, options]) => options.credentials === 'include',
+    ),
+  ).toBe(true);
+});

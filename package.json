@@ -12,7 +12,7 @@
   "scripts": {
     "dev": "concurrently --kill-others -n backend,frontend \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "build": "npm run build -w frontend",
-    "test": "npm test -w backend",
+    "test": "npm test -w backend && npm test -w frontend",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

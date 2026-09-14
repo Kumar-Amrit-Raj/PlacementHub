@@ -38,7 +38,7 @@ Vite proxies `/api` requests to the backend. If you change backend `PORT`, updat
 
 ## Checks and builds
 
-- `npm test`: backend configuration, health, and authentication tests using Node's test runner. Authentication tests start an isolated temporary MongoDB via `mongodb-memory-server`; the first run may download a MongoDB binary. Tests never connect to Atlas.
+- `npm test`: all backend tests, then all frontend tests. Backend tests use disposable MongoDB instances/replica sets; the first run may download a MongoDB binary. Tests never connect to Atlas.
 - `npm run lint`: ESLint checks JavaScript and JSX.
 - `npm run format:check`: verify Prettier formatting.
 - `npm run format`: apply formatting.
@@ -74,12 +74,12 @@ Authentication code lives in `backend/src/modules/auth/`, the User model in `bac
 
 ## Authentication sessions
 
-Registration and login set a `placementhub_refresh` cookie. Refresh tokens are random opaque values; only SHA-256 hashes are stored in MongoDB. The cookie is HTTP-only, host-only, scoped to `/api/v1/auth`, and `SameSite=Strict`. Set `NODE_ENV=production` for the `Secure` flag and serve over HTTPS. Local development permits HTTP.
+Registration and login set a `placementhub_refresh` cookie. Refresh tokens are random opaque values; only SHA-256 hashes are stored in MongoDB. The cookie is HTTP-only, host-only, scoped to `/api/v1/auth`, and `SameSite=Strict` by default (configurable for cross-site HTTPS frontends). Set `NODE_ENV=production` for the `Secure` flag and serve over HTTPS. Local development permits HTTP.
 
 - `POST /api/v1/auth/refresh`: send the refresh cookie and `X-CSRF-Protection: 1`. Returns the same JSON shape as login and replaces the refresh cookie. Missing, malformed, expired, revoked, or replayed refresh tokens return 401 and clear the cookie.
 - `POST /api/v1/auth/logout`: send the refresh cookie and `X-CSRF-Protection: 1`. Revokes that login session and clears its cookie; returns 204, including when the cookie is missing or already invalid. Other login sessions remain valid. The cookie, not a bearer header, identifies the session to log out.
 - `GET /api/v1/auth/me`: send `Authorization: Bearer <accessToken>`. Returns `{ user: { id, name, email, role } }`; missing or invalid credentials return 401.
-- Refresh/logout reject missing protection headers and cross-site browser requests with 403. Use the same-origin Vite proxy locally. Cross-origin credentialed CORS is not enabled.
+- Refresh/logout require the protection header. Cross-site requests must also originate from an explicitly configured trusted frontend; other origins return 403. Use the same-origin Vite proxy locally. See [production security configuration](docs/production-security.md).
 - Sessions expire 30 days after login; rotation never extends that deadline. A limit of 4,096 rotations bounds stored replay history, after which login is required.
 - Each rotation atomically replaces the current hash and retains spent hashes. Reuse of any spent token revokes the whole session, including successor refresh tokens and all associated access tokens. This follows the replay-detection approach in [RFC 9700 §4.14.2](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.14.2).
 - Clients must serialize refresh requests. Concurrent refreshes with the same cookie trigger replay revocation, so do not blindly retry a spent cookie after a lost response; sign in again.
