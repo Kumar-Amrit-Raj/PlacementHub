@@ -46,6 +46,8 @@ Vite proxies `/api` requests to the backend. If you change backend `PORT`, updat
 - `npm run preview -w frontend`: preview that bundle; the development API proxy is not a production deployment configuration.
 - `npm start -w backend`: run the backend without file watching.
 
+See [Phase 6B performance notes](docs/performance.md) for bounded eligibility filtering, normalization backfill, and search tradeoffs.
+
 ## Health endpoint
 
 `GET /api/v1/health` returns HTTP 200 with `status: "ok"` and `database: "connected"` when connected. It returns HTTP 503 if the running backend loses its database connection. Initial database connection failure prevents HTTP startup.
@@ -95,7 +97,7 @@ Initial admins are provisioned only through the operator CLI. See [Admin provisi
 - `/account` shows the signed-in user and logout control. `/student/account`, `/recruiter/account`, and `/admin/account` additionally require the matching role; these are account confirmation pages, not dashboards.
 - `AuthProvider` in `frontend/src/features/auth/` restores sessions once, including under React Strict Mode, and exposes loading, user, error, and pending-action state.
 - `frontend/src/lib/api.js` keeps access tokens only in memory. No tokens are placed in localStorage or sessionStorage; the HTTP-only refresh cookie is managed by the browser.
-- Reload restoration and successful login/registration load the current user through `GET /api/v1/auth/me`. Protected requests use `authClient.request('/path')`, refresh on 401, and retry once. A 403 does not trigger refresh.
+- Reload restoration confirms the current user through `GET /api/v1/auth/me`. Login, registration, and automatic refresh use their sanitized server-returned user directly. Protected requests use `authClient.request('/path')`, refresh on 401, and retry once. A 403 does not trigger refresh.
 - Refresh requests are coalesced per tab. Cookie-changing requests are serialized with Web Locks across tabs where supported; browsers without Web Locks should use a single active tab. BroadcastChannel clears other tabs after login or logout where supported.
 - Failed or uncertain refreshes require sign-in instead of automatic repeated attempts. A failed logout remains visible as unconfirmed and can be retried.
 - Use the frontend origin for all auth requests through the Vite `/api` proxy. Production hosting must route `/api` to the backend and return `index.html` for frontend deep links; serve over HTTPS.

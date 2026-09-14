@@ -31,6 +31,7 @@ before(
     mongo = await MongoMemoryServer.create();
     await mongoose.connect(mongo.getUri(), {
       dbName: 'placementhub_auth_test',
+      monitorCommands: true,
     });
     await Promise.all([User.init(), AuthSession.init()]);
     const app = express();
@@ -496,4 +497,40 @@ test('deleted users cannot refresh and their session is revoked', async () => {
     401,
   );
   assert.ok((await AuthSession.findOne()).revokedAt);
+});
+
+test('authentication resolves the active session and current sanitized user in one command', async () => {
+  const result = await post('register', registration());
+  const commands = [];
+  const client = mongoose.connection.getClient();
+  const listener = (event) => {
+    if (['find', 'aggregate', 'getMore'].includes(event.commandName))
+      commands.push(event);
+  };
+  client.on('commandStarted', listener);
+  let response;
+  try {
+    response = await get('/protected', result.body.accessToken);
+  } finally {
+    client.off('commandStarted', listener);
+  }
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), result.body.user);
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0].commandName, 'aggregate');
+  assert.equal(commands[0].command.aggregate, AuthSession.collection.name);
+});
+
+test('a valid token cannot bind another user to an active session', async () => {
+  const first = await post('register', registration());
+  const second = await post('register', {
+    ...registration(),
+    email: 'second@example.test',
+  });
+  const otherSession = tokens.verify(second.body.accessToken).sid;
+  const mismatched = tokens.sign(
+    { id: first.body.user.id, role: 'admin' },
+    otherSession,
+  );
+  assert.equal((await get('/protected', mismatched)).status, 401);
 });

@@ -1,3 +1,9 @@
+export const normalizeBranch = (value) => value.trim().toLowerCase();
+export const validCgpa = (value) =>
+  Number.isFinite(value) && value >= 0 && value <= 10;
+export const validGraduationYear = (value) =>
+  Number.isInteger(value) && value >= 1950 && value <= 2100;
+
 // Pure domain rule: availability/authorization are separate checks.
 // Application submission re-reads profile and opportunity inside its transaction.
 export function evaluateEligibility(opportunity, profile) {
@@ -7,11 +13,7 @@ export function evaluateEligibility(opportunity, profile) {
   const mismatch = (field, message) =>
     reasons.push({ field, code: 'mismatch', message });
   if (opportunity.minimumCgpa != null) {
-    if (
-      !Number.isFinite(profile?.cgpa) ||
-      profile.cgpa < 0 ||
-      profile.cgpa > 10
-    )
+    if (!validCgpa(profile?.cgpa))
       missing('cgpa', 'Add your CGPA to your student profile.');
     else if (profile.cgpa < opportunity.minimumCgpa)
       mismatch(
@@ -28,7 +30,7 @@ export function evaluateEligibility(opportunity, profile) {
     if (!branch) missing('branch', 'Add your branch to your student profile.');
     else if (
       !opportunity.allowedBranches.some(
-        (value) => value.trim().toLowerCase() === branch.toLowerCase(),
+        (value) => normalizeBranch(value) === normalizeBranch(branch),
       )
     )
       mismatch(
@@ -41,11 +43,7 @@ export function evaluateEligibility(opportunity, profile) {
       );
   }
   if (opportunity.graduationYear != null) {
-    if (
-      !Number.isInteger(profile?.graduationYear) ||
-      profile.graduationYear < 1950 ||
-      profile.graduationYear > 2100
-    )
+    if (!validGraduationYear(profile?.graduationYear))
       missing(
         'graduationYear',
         'Add your graduation year to your student profile.',

@@ -36,7 +36,7 @@ describe('authentication API client', () => {
     let refreshes = 0;
     const { client } = setup((url, options) => {
       if (url.endsWith('/refresh'))
-        return response({ accessToken: 'token-' + ++refreshes });
+        return response({ accessToken: 'token-' + ++refreshes, user });
       if (url.endsWith('/me')) return response({ user });
       return options.headers.Authorization === 'Bearer token-1'
         ? response({}, 401)
@@ -55,7 +55,7 @@ describe('authentication API client', () => {
     let refreshes = 0;
     const { client } = setup((url) => {
       if (url.endsWith('/refresh'))
-        return response({ accessToken: 'token-' + ++refreshes });
+        return response({ accessToken: 'token-' + ++refreshes, user });
       if (url.endsWith('/me')) return response({ user });
       return response({}, url.endsWith('/forbidden') ? 403 : 401);
     });
@@ -93,7 +93,7 @@ describe('authentication API client', () => {
           await new Promise((resolve) => {
             release = resolve;
           });
-        return response({ accessToken: 'token-' + count });
+        return response({ accessToken: 'token-' + count, user });
       }
       if (url.endsWith('/me')) return response({ user });
       if (url.endsWith('/logout')) return response(null, 204);
@@ -116,7 +116,8 @@ describe('authentication API client', () => {
 
   it('retains visible session and reports an unconfirmed logout rather than claiming success', async () => {
     const { client } = setup((url) => {
-      if (url.endsWith('/refresh')) return response({ accessToken: 'token' });
+      if (url.endsWith('/refresh'))
+        return response({ accessToken: 'token', user });
       if (url.endsWith('/me')) return response({ user });
       throw new Error('offline');
     });
@@ -172,4 +173,59 @@ it('uses a configured backend origin with credentialed refresh and current-user 
       ([, options]) => options.credentials === 'include',
     ),
   ).toBe(true);
+});
+
+it.each(['login', 'register'])(
+  '%s accepts the sanitized user without a redundant me request',
+  async (kind) => {
+    const fetcher = vi.fn(async () =>
+      response({ accessToken: 'memory', user }),
+    );
+    const client = createAuthClient({ fetcher });
+    await client[kind]({ email: user.email, password: 'fixture-password' });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/auth/' + kind,
+    ]);
+    expect(client.getSnapshot().user).toEqual(user);
+    expect(localStorage.length).toBe(0);
+    expect(sessionStorage.length).toBe(0);
+  },
+);
+it('automatic refresh adopts the returned current role without me, while rehydration still checks me', async () => {
+  let refreshes = 0;
+  const fetcher = vi.fn(async (url, options) => {
+    if (url.endsWith('/refresh'))
+      return response({
+        accessToken: 'token-' + ++refreshes,
+        user: { ...user, role: refreshes === 1 ? 'student' : 'recruiter' },
+      });
+    if (url.endsWith('/me')) return response({ user });
+    return response(
+      {},
+      options.headers.Authorization === 'Bearer token-1' ? 401 : 200,
+    );
+  });
+  const client = createAuthClient({ fetcher });
+  await client.initialize();
+  await client.request('/resource');
+  expect(client.getSnapshot().user.role).toBe('recruiter');
+  expect(
+    fetcher.mock.calls.filter(([url]) => url.endsWith('/me')),
+  ).toHaveLength(1);
+  expect(refreshes).toBe(2);
+});
+it('ignores a stale login response after another tab changes the session', async () => {
+  let resolve;
+  const client = createAuthClient({
+    fetcher: () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  });
+  const login = client.login({});
+  await vi.waitFor(() => expect(resolve).toBeTypeOf('function'));
+  client.sessionChanged();
+  resolve(response({ accessToken: 'old', user }));
+  await expect(login).rejects.toMatchObject({ status: 401 });
+  expect(client.getSnapshot().status).toBe('anonymous');
 });

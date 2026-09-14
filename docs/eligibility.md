@@ -27,7 +27,7 @@ Student `GET /api/v1/opportunities` accepts:
 
 Filters combine with AND; search fields combine with OR. Unknown keys, repeated values, blank supplied strings, and invalid enums return 400. Regex operators are escaped. Omit empty filters. Recruiter management list parameters remain unchanged.
 
-Visibility and filters are applied before selecting a page. Eligibility uses the same evaluator for both returned reasons and filtering. Filtered results are streamed in bounded batches until a page plus one matching record is found; sparse eligibility matches can scan many candidates. This favors consistent domain rules without duplicating them in database expressions. Cursors represent live results, not frozen snapshots; changing filters or profile data requires starting again without the old cursor.
+Visibility and filters are applied before selecting a page. MongoDB selects the requested status using equivalent numeric, branch, and graduation-year predicates, then limits results to one page plus one record. The existing evaluator supplies all returned statuses and reasons; parity tests cover both implementations. Normalized branches preserve JavaScript Unicode behavior. See [performance hardening](performance.md) for startup backfill details and remaining database scan costs. Cursors represent live results, not frozen snapshots; changing filters or profile data requires starting again without the old cursor.
 
 ## UI and availability
 
