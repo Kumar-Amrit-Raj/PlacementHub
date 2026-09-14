@@ -405,3 +405,94 @@ test('standalone transaction errors fail closed with a useful response', async (
   assert.equal((await apply()).status, 503);
   assert.equal(await Application.countDocuments(), 0);
 });
+
+test('revoked sessions and changed roles cannot apply or change statuses', async () => {
+  const item = (await apply()).body.application;
+  await AuthSession.updateMany(
+    { user: actors.recruiter.user.id },
+    { $set: { revokedAt: new Date() } },
+  );
+  assert.equal((await change(item._id, 'shortlisted', 0)).status, 401);
+  await User.updateOne(
+    { _id: actors.student.user.id },
+    { $set: { role: 'recruiter' } },
+  );
+  assert.equal((await apply()).status, 403);
+  assert.equal(
+    (await api('/applications/mine', 'GET', undefined, 'student')).status,
+    403,
+  );
+  assert.equal((await Application.findById(item._id)).history.length, 1);
+});
+test('rejection from each nonterminal state preserves the exact audit chain and snapshot', async () => {
+  for (const stage of [0, 1, 2]) {
+    await Application.deleteMany({});
+    const item = (await apply()).body.application;
+    for (let index = 0; index < stage; index++)
+      assert.equal(
+        (await change(item._id, ['shortlisted', 'interview'][index], index))
+          .status,
+        200,
+      );
+    const result = await change(item._id, 'rejected', stage);
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.body.application.snapshot, item.snapshot);
+    const history = result.body.application.history;
+    assert.equal(history.length, stage + 2);
+    for (let index = 1; index < history.length; index++) {
+      assert.equal(history[index].from, history[index - 1].to);
+      assert.ok(new Date(history[index].at) >= new Date(history[index - 1].at));
+    }
+    assert.equal((await change(item._id, 'selected', stage + 1)).status, 409);
+    assert.equal(
+      (await Application.findById(item._id)).history.length,
+      stage + 2,
+    );
+  }
+});
+test('history and identity injection into status updates is rejected without mutation', async () => {
+  const item = (await apply()).body.application;
+  for (const extra of [
+    { history: [] },
+    { snapshot: {} },
+    { student: actors.admin.user.id },
+    { company: new mongoose.Types.ObjectId().toString() },
+    { version: 90 },
+  ]) {
+    assert.equal(
+      (
+        await api('/applications/' + item._id + '/status', 'PATCH', {
+          status: 'shortlisted',
+          expectedVersion: 0,
+          ...extra,
+        })
+      ).status,
+      400,
+    );
+  }
+  const record = await Application.findById(item._id);
+  assert.equal(record.version, 0);
+  assert.equal(record.history.length, 1);
+});
+test('historical applications remain visible after expiry and company approval loss', async () => {
+  const item = (await apply()).body.application;
+  await Opportunity.updateOne(
+    { _id: opportunity._id },
+    { deadline: new Date(Date.now() - 1) },
+  );
+  await RecruiterProfile.updateOne(
+    { _id: company._id },
+    { approvalStatus: 'rejected' },
+  );
+  assert.equal((await apply()).status, 404);
+  assert.equal(
+    (await api('/applications/mine', 'GET', undefined, 'student')).body
+      .applications[0]._id,
+    item._id,
+  );
+  assert.equal(
+    (await api('/applications/company')).body.applications[0]._id,
+    item._id,
+  );
+  assert.equal((await change(item._id, 'shortlisted', 0)).status, 200);
+});

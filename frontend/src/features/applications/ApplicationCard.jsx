@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { RequestError } from '../opportunities/OpportunityShared.jsx';
@@ -19,6 +19,7 @@ export default function ApplicationCard({
   application,
   recruiter = false,
   onUpdate,
+  onReload,
 }) {
   const { client } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -26,6 +27,13 @@ export default function ApplicationCard({
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
   const flight = useRef(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const snapshot = application.snapshot;
   async function update(status) {
     if (flight.current || blocked) return;
@@ -41,9 +49,11 @@ export default function ApplicationCard({
           body: { status, expectedVersion: application.version },
         },
       );
+      if (!active.current) return;
       onUpdate(data.application);
       setSuccess('Application status updated to ' + status + '.');
     } catch (error) {
+      if (!active.current) return;
       setError({
         message:
           error.status === 409
@@ -53,7 +63,7 @@ export default function ApplicationCard({
       setBlocked(true);
     } finally {
       flight.current = false;
-      setBusy(false);
+      if (active.current) setBusy(false);
     }
   }
   return (
@@ -107,6 +117,11 @@ export default function ApplicationCard({
         </p>
       )}
       <RequestError error={error} />
+      {blocked && (
+        <button className="compact secondary" onClick={onReload}>
+          Reload latest applications
+        </button>
+      )}
       {recruiter &&
         ((transitions[application.status] ?? []).length ? (
           <div className="actions">
@@ -132,4 +147,5 @@ ApplicationCard.propTypes = {
   application: PropTypes.object.isRequired,
   recruiter: PropTypes.bool,
   onUpdate: PropTypes.func.isRequired,
+  onReload: PropTypes.func.isRequired,
 };

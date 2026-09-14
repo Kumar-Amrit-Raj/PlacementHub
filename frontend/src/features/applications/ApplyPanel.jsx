@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { RequestError, useNow } from '../opportunities/OpportunityShared.jsx';
 import { expired } from '../opportunities/opportunity-utils.js';
-export default function ApplyPanel({ opportunity }) {
+export default function ApplyPanel({ opportunity, onRefresh }) {
   const { client } = useAuth();
   const [checking, setChecking] = useState(true);
   const [applied, setApplied] = useState(false);
@@ -12,7 +12,6 @@ export default function ApplyPanel({ opportunity }) {
   const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState('');
-  const [retry, setRetry] = useState(0);
   const flight = useRef(false);
   const active = useRef(false);
   const now = useNow();
@@ -53,7 +52,7 @@ export default function ApplyPanel({ opportunity }) {
       cancelled = true;
       active.current = false;
     };
-  }, [client, opportunity._id, retry]);
+  }, [client, opportunity._id]);
   async function apply() {
     if (
       flight.current ||
@@ -83,6 +82,7 @@ export default function ApplyPanel({ opportunity }) {
           setSuccess('You have already applied to this opportunity.');
         } else {
           setError({
+            details: error.eligibility?.reasons,
             message:
               error.status === 422
                 ? 'Your eligibility has changed. Refresh opportunity details and review your profile before applying.'
@@ -137,15 +137,15 @@ export default function ApplyPanel({ opportunity }) {
         </button>
         <Link to="/student/applications">My Applications</Link>
         {blocked && !busy && (
-          <button
-            className="secondary"
-            onClick={() => setRetry((value) => value + 1)}
-          >
-            Check application status
+          <button className="secondary" onClick={onRefresh}>
+            Refresh opportunity and application status
           </button>
         )}
       </div>
     </section>
   );
 }
-ApplyPanel.propTypes = { opportunity: PropTypes.object.isRequired };
+ApplyPanel.propTypes = {
+  opportunity: PropTypes.object.isRequired,
+  onRefresh: PropTypes.func.isRequired,
+};

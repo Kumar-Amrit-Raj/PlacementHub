@@ -154,3 +154,7 @@ Students can apply once to a visible, unexpired opportunity when their current p
 - Role-aware navigation, pagination, loading, empty, error, success and responsive states are included. Run `npm test -w frontend`, `npm run lint -w frontend`, and `npm run build -w frontend`. Browser checks use a disposable replica set.
 
 No Phase 5C hardening or final dashboards are included.
+
+## Application hardening (Phase 5C)
+
+Apply recovery refreshes availability, eligibility, and existing applications together. Recruiter conflicts offer an explicit reload, and late update responses cannot overwrite reloaded cards. See [Application verification](docs/applications-verification.md) for regression coverage and disposable-database end-to-end checks.
