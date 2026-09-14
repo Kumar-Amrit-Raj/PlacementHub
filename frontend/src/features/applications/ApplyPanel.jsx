@@ -6,8 +6,7 @@ import { RequestError, useNow } from '../opportunities/OpportunityShared.jsx';
 import { expired } from '../opportunities/opportunity-utils.js';
 export default function ApplyPanel({ opportunity, onRefresh }) {
   const { client } = useAuth();
-  const [checking, setChecking] = useState(true);
-  const [applied, setApplied] = useState(false);
+  const [applied, setApplied] = useState(opportunity.hasApplied === true);
   const [busy, setBusy] = useState(false);
   const [blocked, setBlocked] = useState(false);
   const [error, setError] = useState(null);
@@ -15,50 +14,19 @@ export default function ApplyPanel({ opportunity, onRefresh }) {
   const flight = useRef(false);
   const active = useRef(false);
   const now = useNow();
+  const missingStatus = typeof opportunity.hasApplied !== 'boolean';
   useEffect(() => {
-    let cancelled = false;
     active.current = true;
-    setChecking(true);
-    setError(null);
-    setBlocked(false);
-    (async () => {
-      let cursor;
-      do {
-        const data = await client.request(
-          '/applications/mine?limit=100' +
-            (cursor ? '&after=' + encodeURIComponent(cursor) : ''),
-        );
-        if (cancelled) return;
-        if (
-          data.applications.some((item) => item.opportunity === opportunity._id)
-        ) {
-          setApplied(true);
-          return;
-        }
-        cursor = data.nextCursor;
-      } while (cursor);
-      setApplied(false);
-    })()
-      .catch((error) => {
-        if (!cancelled) {
-          setError(error);
-          setBlocked(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setChecking(false);
-      });
     return () => {
-      cancelled = true;
       active.current = false;
     };
-  }, [client, opportunity._id]);
+  }, []);
   async function apply() {
     if (
       flight.current ||
       applied ||
       blocked ||
-      checking ||
+      missingStatus ||
       opportunity.eligibility?.status !== 'eligible' ||
       expired(opportunity)
     )
@@ -101,7 +69,12 @@ export default function ApplyPanel({ opportunity, onRefresh }) {
   return (
     <section className="application-panel" aria-label="Apply to opportunity">
       <h2>Your application</h2>
-      {checking && <p role="status">Checking previous applications…</p>}
+      {missingStatus && (
+        <p role="alert">
+          Application status is unavailable. Refresh opportunity details before
+          applying.
+        </p>
+      )}
       {success && (
         <p role="status" className="success">
           {success}
@@ -115,7 +88,7 @@ export default function ApplyPanel({ opportunity, onRefresh }) {
           retrying.
         </p>
       )}
-      {!checking && opportunity.eligibility?.status !== 'eligible' && (
+      {opportunity.eligibility?.status !== 'eligible' && (
         <p>
           Meet the eligibility requirements and complete the required profile
           fields before applying.
@@ -124,10 +97,10 @@ export default function ApplyPanel({ opportunity, onRefresh }) {
       <div className="actions">
         <button
           disabled={
-            checking ||
             busy ||
             applied ||
             blocked ||
+            missingStatus ||
             opportunity.eligibility?.status !== 'eligible' ||
             expired(opportunity, now)
           }
@@ -136,7 +109,7 @@ export default function ApplyPanel({ opportunity, onRefresh }) {
           {applied ? 'Already applied' : busy ? 'Submitting…' : 'Apply'}
         </button>
         <Link to="/student/applications">My Applications</Link>
-        {blocked && !busy && (
+        {(blocked || missingStatus) && !busy && (
           <button className="secondary" onClick={onRefresh}>
             Refresh opportunity and application status
           </button>

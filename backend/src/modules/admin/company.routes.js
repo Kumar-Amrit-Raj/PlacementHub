@@ -1,3 +1,4 @@
+import { User } from '../users/user.model.js';
 import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middleware/validate.js';
@@ -59,7 +60,20 @@ export function createCompanyAdminRouter() {
     );
     if (!company)
       return res.status(404).json({ error: 'Company profile not found' });
-    res.json({ company });
+    const result = company.toJSON();
+    const reviewers = await User.find({
+      _id: { $in: result.approvalHistory.map((review) => review.actor) },
+    })
+      .select('name')
+      .lean();
+    const names = new Map(
+      reviewers.map((user) => [String(user._id), user.name]),
+    );
+    result.approvalHistory = result.approvalHistory.map((review) => ({
+      ...review,
+      actorLabel: names.get(String(review.actor)) || 'Administrator',
+    }));
+    res.json({ company: result });
   });
   for (const [action, status] of [
     ['approve', 'approved'],

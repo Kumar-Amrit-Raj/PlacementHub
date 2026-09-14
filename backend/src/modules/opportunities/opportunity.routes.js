@@ -1,3 +1,4 @@
+import { Application } from '../applications/application.model.js';
 import { StudentProfile } from '../profiles/student-profile.model.js';
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
@@ -135,6 +136,12 @@ export function createOpportunityRouter(tokens) {
       profile,
     });
     if (!opportunity) throw new OpportunityError('Opportunity not found', 404);
+    opportunity.hasApplied = Boolean(
+      await Application.exists({
+        student: req.user.id,
+        opportunity: opportunity._id,
+      }),
+    );
     res.json({ opportunity });
   });
   router.use((error, _req, res, next) => {

@@ -1,20 +1,20 @@
 export const REFRESH_COOKIE = 'placementhub_refresh';
 
-export function refreshCookieOptions(nodeEnv) {
+export function refreshCookieOptions(nodeEnv, sameSite = 'strict') {
   return {
     httpOnly: true,
     secure: nodeEnv === 'production',
-    sameSite: 'strict',
+    sameSite,
     path: '/api/v1/auth',
   };
 }
 
-// Custom headers require a browser preflight; this API enables no cross-origin CORS.
-// Together with SameSite=Strict this protects cookie-authenticated mutations.
+// Require a preflight-only header and explicitly trust cross-site origins.
 export function protectSessionMutation(req, res, next) {
   if (
     req.get('X-CSRF-Protection') !== '1' ||
-    req.get('Sec-Fetch-Site') === 'cross-site'
+    (req.get('Sec-Fetch-Site') === 'cross-site' &&
+      !req.app.locals.allowedOrigins?.includes(req.get('Origin')))
   ) {
     return res
       .status(403)

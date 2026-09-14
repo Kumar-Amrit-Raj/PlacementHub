@@ -27,5 +27,51 @@ export function readConfig(env = process.env) {
       'JWT_SECRET must contain at least 32 characters. Configure backend/.env.',
     );
   }
-  return { port, mongodbUri, nodeEnv, jwtSecret };
+  const allowedOrigins = (env.CORS_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  for (const origin of allowedOrigins) {
+    let url;
+    try {
+      url = new URL(origin);
+    } catch {
+      throw new Error(
+        'CORS_ALLOWED_ORIGINS must contain exact HTTP(S) origins.',
+      );
+    }
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      url.origin !== origin ||
+      url.username ||
+      url.password ||
+      (nodeEnv === 'production' && url.protocol !== 'https:')
+    ) {
+      throw new Error(
+        'CORS_ALLOWED_ORIGINS must contain exact origins (HTTPS in production).',
+      );
+    }
+  }
+  const cookieSameSite = env.REFRESH_COOKIE_SAME_SITE || 'strict';
+  if (
+    !['strict', 'lax', 'none'].includes(cookieSameSite) ||
+    (cookieSameSite === 'none' &&
+      (nodeEnv !== 'production' || !allowedOrigins.length))
+  ) {
+    throw new Error(
+      'REFRESH_COOKIE_SAME_SITE must be strict/lax, or none with production HTTPS allowed origins.',
+    );
+  }
+  const trustProxy = Number(env.TRUST_PROXY_HOPS || 0);
+  if (!Number.isInteger(trustProxy) || trustProxy < 0 || trustProxy > 10)
+    throw new Error('TRUST_PROXY_HOPS must be an integer from 0 to 10.');
+  return {
+    port,
+    mongodbUri,
+    nodeEnv,
+    jwtSecret,
+    allowedOrigins,
+    cookieSameSite,
+    trustProxy,
+  };
 }

@@ -8,6 +8,7 @@ export class ApiError extends Error {
 }
 
 export function createAuthClient({
+  apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '',
   fetcher = (...args) => fetch(...args),
   exclusive = (work) => work(),
   notify = () => {},
@@ -40,16 +41,21 @@ export function createAuthClient({
   ) {
     let response;
     try {
-      response = await fetcher('/api/v1' + path, {
-        method,
-        credentials: 'include',
-        headers: {
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-          ...(token ? { Authorization: 'Bearer ' + token } : {}),
-          ...(session ? { 'X-CSRF-Protection': '1' } : {}),
+      response = await fetcher(
+        apiBaseUrl.replace(/\/$/, '') + '/api/v1' + path,
+        {
+          method,
+          credentials: 'include',
+          headers: {
+            ...(body !== undefined
+              ? { 'Content-Type': 'application/json' }
+              : {}),
+            ...(token ? { Authorization: 'Bearer ' + token } : {}),
+            ...(session ? { 'X-CSRF-Protection': '1' } : {}),
+          },
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-      });
+      );
     } catch {
       throw new ApiError(
         'Unable to reach the server. Check your connection and try signing in again.',

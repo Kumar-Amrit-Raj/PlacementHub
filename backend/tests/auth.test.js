@@ -50,7 +50,9 @@ before(
     app.get('/unauthenticated', authorize('admin'), (_req, res) =>
       res.sendStatus(204),
     );
-    app.use(createApp({ jwtSecret }));
+    app.use(
+      createApp({ jwtSecret, rateLimits: { credentials: 1000, auth: 1000 } }),
+    );
     server = app.listen(0, '127.0.0.1');
     await new Promise((resolve) => server.once('listening', resolve));
     base = `http://127.0.0.1:${server.address().port}`;
@@ -303,10 +305,11 @@ test('refresh cookie is HTTP-only and server stores only digests', async () => {
 });
 
 test('production cookies are Secure and clear with the same attributes', async (t) => {
-  const production = createApp({ jwtSecret, nodeEnv: 'production' }).listen(
-    0,
-    '127.0.0.1',
-  );
+  const production = createApp({
+    jwtSecret,
+    nodeEnv: 'production',
+    rateLimits: { credentials: 1000, auth: 1000 },
+  }).listen(0, '127.0.0.1');
   await new Promise((resolve) => production.once('listening', resolve));
   t.after(() => new Promise((resolve) => production.close(resolve)));
   const url = `http://127.0.0.1:${production.address().port}/api/v1/auth`;

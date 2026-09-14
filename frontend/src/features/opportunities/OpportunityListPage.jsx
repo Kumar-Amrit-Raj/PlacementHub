@@ -124,10 +124,12 @@ export default function OpportunityListPage({ recruiter = false }) {
           }}
         >
           <h2>Find your next role</h2>
-          <div className="profile-form">
-            <label>
+          <fieldset className="profile-form">
+            <legend className="sr-only">Opportunity filters</legend>
+            <label htmlFor="filter-search">
               Search opportunities
               <input
+                id="filter-search"
                 value={filters.search}
                 maxLength={200}
                 placeholder="Title, description, or company"
@@ -139,9 +141,10 @@ export default function OpportunityListPage({ recruiter = false }) {
                 }
               />
             </label>
-            <label>
+            <label htmlFor="filter-location">
               Location filter
               <input
+                id="filter-location"
                 value={filters.location}
                 maxLength={200}
                 placeholder="City or remote"
@@ -153,9 +156,10 @@ export default function OpportunityListPage({ recruiter = false }) {
                 }
               />
             </label>
-            <label>
+            <label htmlFor="filter-jobType">
               Job type filter
               <select
+                id="filter-jobType"
                 value={filters.jobType}
                 onChange={(event) =>
                   setFilters((current) => ({
@@ -170,9 +174,10 @@ export default function OpportunityListPage({ recruiter = false }) {
                 ))}
               </select>
             </label>
-            <label>
+            <label htmlFor="filter-eligibility">
               Eligibility filter
               <select
+                id="filter-eligibility"
                 value={filters.eligibility}
                 onChange={(event) =>
                   setFilters((current) => ({
@@ -187,7 +192,7 @@ export default function OpportunityListPage({ recruiter = false }) {
                 <option value="incomplete_profile">Incomplete profile</option>
               </select>
             </label>
-          </div>
+          </fieldset>
           <div className="actions">
             <button>Apply filters</button>
             <button

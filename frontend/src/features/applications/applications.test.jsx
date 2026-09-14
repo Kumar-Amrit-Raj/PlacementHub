@@ -7,6 +7,7 @@ import { AuthProvider } from '../auth/AuthContext.jsx';
 import { createAuthClient } from '../../lib/api.js';
 const item = {
   _id: 'job',
+  hasApplied: false,
   title: 'Engineer',
   company: { companyName: 'Example Labs' },
   deadline: '2099-01-01T00:00:00Z',
@@ -48,7 +49,7 @@ function setup(role, path, handler) {
   );
   return { actor: userEvent.setup(), fetcher };
 }
-it('checks all application pages, submits once and shows success', async () => {
+it('uses the detail applied flag without scanning applications, submits once and shows success', async () => {
   let posts = 0;
   const urls = [];
   const { actor } = setup(
@@ -73,7 +74,7 @@ it('checks all application pages, submits once and shows success', async () => {
       screen.getByRole('button', { name: 'Apply', exact: true }),
     ).toBeEnabled(),
   );
-  expect(urls.some((url) => url.includes('after=next'))).toBe(true);
+  expect(urls).toEqual(['/opportunities/job']);
   await actor.dblClick(
     screen.getByRole('button', { name: 'Apply', exact: true }),
   );
@@ -83,19 +84,16 @@ it('checks all application pages, submits once and shows success', async () => {
     screen.getByRole('button', { name: 'Already applied' }),
   ).toBeDisabled();
 });
-it('blocks an already applied opportunity found beyond the first page', async () => {
-  setup('student', '/student/opportunities/job', (url) =>
-    response(
-      url === '/opportunities/job'
-        ? { opportunity: item }
-        : url.includes('after=')
-          ? { applications: [application], nextCursor: null }
-          : { applications: [], nextCursor: 'next' },
-    ),
+it('blocks an already applied opportunity using the authoritative detail flag', async () => {
+  const { fetcher } = setup('student', '/student/opportunities/job', () =>
+    response({ opportunity: { ...item, hasApplied: true } }),
   );
   expect(
     await screen.findByRole('button', { name: 'Already applied' }),
   ).toBeDisabled();
+  expect(
+    fetcher.mock.calls.some(([url]) => url.includes('/applications')),
+  ).toBe(false);
 });
 it.each(['not_eligible', 'incomplete_profile'])(
   'blocks applying for %s',
@@ -372,7 +370,7 @@ it('finds a committed application after an uncertain submission without repostin
       }
       return response(
         url === '/opportunities/job'
-          ? { opportunity: item }
+          ? { opportunity: { ...item, hasApplied: posted } }
           : { applications: posted ? [application] : [], nextCursor: null },
       );
     },
@@ -464,4 +462,16 @@ it('recovers a failed next page without losing existing student applications', a
     screen.getByRole('button', { name: 'Load more applications' }),
   );
   await screen.findByText('Second');
+});
+
+it('fails closed when authoritative applied status is missing', async () => {
+  setup('student', '/student/opportunities/job', () =>
+    response({ opportunity: { ...item, hasApplied: undefined } }),
+  );
+  await screen.findByText(
+    'Application status is unavailable. Refresh opportunity details before applying.',
+  );
+  expect(
+    screen.getByRole('button', { name: 'Apply', exact: true }),
+  ).toBeDisabled();
 });
