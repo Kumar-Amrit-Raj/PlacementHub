@@ -17,6 +17,9 @@ test(
     });
     const uri = mongo.getUri('startup_verification');
     await mongoose.connect(uri);
+    const legacyOpportunity = await mongoose.connection
+      .collection('opportunities')
+      .insertOne({ allowedBranches: [' İ '], version: 4 });
     const reservation = createServer().listen(0, '127.0.0.1');
     await once(reservation, 'listening');
     const port = reservation.address().port;
@@ -57,6 +60,11 @@ test(
     });
     const response = await fetch('http://127.0.0.1:' + port + '/api/v1/health');
     assert.equal(response.status, 200);
+    const migrated = await mongoose.connection
+      .collection('opportunities')
+      .findOne({ _id: legacyOpportunity.insertedId });
+    assert.deepEqual(migrated.eligibilityBranches, ['i\u0307']);
+    assert.equal(migrated.version, 4);
     const indexes = await mongoose.connection
       .collection('applications')
       .indexes();

@@ -1,3 +1,4 @@
+import { backfillEligibilityBranches } from './modules/opportunities/eligibility-backfill.js';
 import { createApp } from './app.js';
 import { readConfig } from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './config/database.js';
@@ -51,6 +52,7 @@ async function start() {
     StudentProfile.init(),
     RecruiterProfile.init(),
   ]);
+  await backfillEligibilityBranches();
   server = createApp({
     ...config,
   }).listen(config.port, () => {

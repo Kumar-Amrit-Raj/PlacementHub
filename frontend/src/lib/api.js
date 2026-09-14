@@ -73,9 +73,17 @@ export function createAuthClient({
     return data;
   }
 
-  async function accept(result, expectedGeneration) {
-    // /me is the source of current user details, not decoded JWT claims.
-    const current = await send('/auth/me', { token: result.accessToken });
+  async function accept(result, expectedGeneration, rehydrate = false) {
+    // Session responses contain the sanitized current database user, never JWT claims.
+    // Explicit page-load rehydration still confirms the current authenticated user.
+    const current = rehydrate
+      ? await send('/auth/me', { token: result.accessToken })
+      : result;
+    if (!current?.user || typeof result.accessToken !== 'string')
+      throw new ApiError(
+        'Invalid authentication response. Please sign in again.',
+        401,
+      );
     if (generation !== expectedGeneration)
       throw new ApiError('Your session changed. Please sign in again.', 401);
     accessToken = result.accessToken;
@@ -87,7 +95,7 @@ export function createAuthClient({
     });
   }
 
-  function refresh() {
+  function refresh(rehydrate = false) {
     if (!refreshFlight) {
       const expectedGeneration = generation;
       refreshFlight = serialized(async () => {
@@ -98,7 +106,7 @@ export function createAuthClient({
             method: 'POST',
             session: true,
           });
-          await accept(result, expectedGeneration);
+          await accept(result, expectedGeneration, rehydrate);
         } catch (error) {
           if (generation === expectedGeneration) {
             clear(error.status === 401 ? null : error.message);
@@ -134,7 +142,7 @@ export function createAuthClient({
       return () => listeners.delete(listener);
     },
     initialize() {
-      startup ??= refresh().catch(() => {});
+      startup ??= refresh(true).catch(() => {});
       return startup;
     },
     login: (body) => credentials('login', body),

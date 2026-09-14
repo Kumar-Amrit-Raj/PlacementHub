@@ -1,3 +1,4 @@
+import { normalizeBranch } from './eligibility.js';
 import mongoose from 'mongoose';
 import { JOB_TYPES } from './opportunity.validation.js';
 
@@ -26,6 +27,7 @@ const opportunitySchema = new mongoose.Schema(
       type: [{ type: String, trim: true, maxlength: 100 }],
       default: [],
     },
+    eligibilityBranches: { type: [String], default: undefined, select: false },
     graduationYear: { type: Number, min: 1950, max: 2100, default: null },
     status: {
       type: String,
@@ -42,9 +44,32 @@ const opportunitySchema = new mongoose.Schema(
     toJSON: {
       transform(_doc, value) {
         delete value.__v;
+        delete value.eligibilityBranches;
         return value;
       },
     },
+  },
+);
+opportunitySchema.pre('validate', function () {
+  if (this.isNew || this.isModified('allowedBranches')) {
+    this.eligibilityBranches = (this.allowedBranches || []).map(
+      normalizeBranch,
+    );
+  }
+});
+// Keep the derived value atomic with ordinary opportunity edits.
+opportunitySchema.pre(
+  ['findOneAndUpdate', 'updateOne', 'updateMany'],
+  function () {
+    const update = this.getUpdate();
+    const branches = update.$set?.allowedBranches ?? update.allowedBranches;
+    if (branches !== undefined) {
+      update.$set ??= {};
+      update.$set.eligibilityBranches = (branches || []).map(normalizeBranch);
+    } else if (update.$unset?.allowedBranches !== undefined) {
+      update.$set ??= {};
+      update.$set.eligibilityBranches = [];
+    }
   },
 );
 opportunitySchema.index({ company: 1, _id: 1 });

@@ -1,3 +1,4 @@
+import { eligibilityExpression } from './eligibility-query.js';
 import { evaluateEligibility } from './eligibility.js';
 import mongoose from 'mongoose';
 import { Opportunity } from './opportunity.model.js';
@@ -74,6 +75,9 @@ export async function publishedOpportunities({
     {
       $match: {
         status: 'published',
+        ...(eligibility
+          ? { $expr: eligibilityExpression(eligibility, profile) }
+          : {}),
         ...(jobType ? { jobType } : {}),
         ...(location
           ? { location: { $regex: literal(location), $options: 'i' } }
@@ -122,7 +126,7 @@ export async function publishedOpportunities({
           },
         ]
       : []),
-    ...(!eligibility || id ? [{ $limit: id ? 1 : limit + 1 }] : []),
+    { $limit: id ? 1 : limit + 1 },
     {
       $project: {
         _id: 1,
@@ -146,17 +150,9 @@ export async function publishedOpportunities({
       },
     },
   ];
-  const cursor = Opportunity.aggregate(pipeline).cursor({ batchSize: 100 });
-  const records = [];
-  try {
-    for await (const opportunity of cursor) {
-      const evaluation = evaluateEligibility(opportunity, profile);
-      if (!eligibility || evaluation.status === eligibility)
-        records.push({ ...opportunity, eligibility: evaluation });
-      if (records.length >= (id ? 1 : limit + 1)) break;
-    }
-  } finally {
-    await cursor.close();
-  }
-  return records;
+  const records = await Opportunity.aggregate(pipeline);
+  return records.map((opportunity) => ({
+    ...opportunity,
+    eligibility: evaluateEligibility(opportunity, profile),
+  }));
 }

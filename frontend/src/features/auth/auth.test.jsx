@@ -59,7 +59,7 @@ describe('authentication pages and routes', () => {
           email: user.email,
           password: 'long-password',
         });
-        return response({ accessToken: 'signed-in' });
+        return response({ accessToken: 'signed-in', user });
       }
       if (url.endsWith('/me')) return response({ user });
       expect(options.headers['X-CSRF-Protection']).toBe('1');
@@ -91,7 +91,10 @@ describe('authentication pages and routes', () => {
             password: 'long-password',
             role,
           });
-          return response({ accessToken: 'registered' }, 201);
+          return response(
+            { accessToken: 'registered', user: { ...user, role } },
+            201,
+          );
         }
         return response({ user: { ...user, role } });
       });
